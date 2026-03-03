@@ -91,6 +91,10 @@ void ArcReplacer::RecordAccess(frame_id_t frame_id, page_id_t page_id, [[maybe_u
  */
 void ArcReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
     std::scoped_lock lock(latch_);
+
+    if(frame_id < 0 || static_cast<size_t>(frame_id) >= replacer_size_){
+        throw std::runtime_error("invalid frame id");
+    }
     auto now_frame = alive_map_.find(frame_id);
     if(now_frame == alive_map_.end()){
         return;
