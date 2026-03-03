@@ -2,11 +2,11 @@
 //
 //                         BusTub
 //
-// lru_replacer.cpp
+// 文件：lru_replacer.cpp
 //
-// Identification: src/buffer/lru_replacer.cpp
+// 标识：src/buffer/lru_replacer.cpp
 //
-// Copyright (c) 2015-2025, Carnegie Mellon University Database Group
+// 版权所有 (c) 2015-2025，卡内基梅隆大学数据库小组
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,13 +15,13 @@
 namespace bustub {
 
 /**
- * Create a new LRUReplacer.
- * @param num_pages the maximum number of pages the LRUReplacer will be required to store
+ * 创建一个新的 LRUReplacer。
+ * @param num_pages LRUReplacer 需要存储的最大页数
  */
 LRUReplacer::LRUReplacer(size_t num_pages) {}
 
 /**
- * Destroys the LRUReplacer.
+ * 销毁 LRUReplacer。
  */
 LRUReplacer::~LRUReplacer() = default;
 
@@ -33,4 +33,4 @@ void LRUReplacer::Unpin(frame_id_t frame_id) {}
 
 auto LRUReplacer::Size() -> size_t { return 0; }
 
-}  // namespace bustub
+}  // 命名空间 bustub

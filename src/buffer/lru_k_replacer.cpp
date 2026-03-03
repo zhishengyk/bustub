@@ -2,11 +2,11 @@
 //
 //                         BusTub
 //
-// lru_k_replacer.cpp
+// 文件：lru_k_replacer.cpp
 //
-// Identification: src/buffer/lru_k_replacer.cpp
+// 标识：src/buffer/lru_k_replacer.cpp
 //
-// Copyright (c) 2015-2025, Carnegie Mellon University Database Group
+// 版权所有 (c) 2015-2025，卡内基梅隆大学数据库小组
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,90 +17,84 @@ namespace bustub {
 
 /**
  *
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief a new LRUKReplacer.
- * @param num_frames the maximum number of frames the LRUReplacer will be required to store
+ * @brief 创建一个新的 LRUKReplacer。
+ * @param num_frames LRUReplacer 需要存储的最大帧数
  */
 LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {}
 
 /**
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief Find the frame with largest backward k-distance and evict that frame. Only frames
- * that are marked as 'evictable' are candidates for eviction.
+ * @brief 找到反向 k 距离最大的帧并将其驱逐。只有被标记为“可驱逐”的帧
+ * 才是候选驱逐对象。
  *
- * A frame with less than k historical references is given +inf as its backward k-distance.
- * If multiple frames have inf backward k-distance, then evict frame whose oldest timestamp
- * is furthest in the past.
+ * 历史访问次数少于 k 次的帧，其反向 k 距离记为 +inf。
+ * 如果多个帧的反向 k 距离都为 inf，则驱逐最早时间戳最久远的帧。
  *
- * Successful eviction of a frame should decrement the size of replacer and remove the frame's
- * access history.
+ * 成功驱逐一个帧后，应减少 replacer 的大小，并移除该帧的访问历史。
  *
- * @return the frame ID if a frame is successfully evicted, or `std::nullopt` if no frames can be evicted.
+ * @return 若成功驱逐则返回帧 ID；若没有可驱逐帧则返回 `std::nullopt`。
  */
 auto LRUKReplacer::Evict() -> std::optional<frame_id_t> { return std::nullopt; }
 
 /**
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief Record the event that the given frame id is accessed at current timestamp.
- * Create a new entry for access history if frame id has not been seen before.
+ * @brief 记录给定 frame id 在当前时间戳的一次访问事件。
+ * 如果此前未见过该 frame id，则为其访问历史创建新条目。
  *
- * If frame id is invalid (ie. larger than replacer_size_), throw an exception. You can
- * also use BUSTUB_ASSERT to abort the process if frame id is invalid.
+ * 如果 frame id 非法（例如大于 replacer_size_），应抛出异常。你也可以在
+ * frame id 非法时使用 BUSTUB_ASSERT 终止进程。
  *
- * @param frame_id id of frame that received a new access.
- * @param access_type type of access that was received. This parameter is only needed for
- * leaderboard tests.
+ * @param frame_id 收到新访问的帧 ID。
+ * @param access_type 本次访问的类型。该参数仅用于排行榜测试。
  */
 void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {}
 
 /**
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief Toggle whether a frame is evictable or non-evictable. This function also
- * controls replacer's size. Note that size is equal to number of evictable entries.
+ * @brief 切换帧是否可驱逐。该函数也会控制 replacer 的大小。
+ * 注意 size 等于可驱逐条目的数量。
  *
- * If a frame was previously evictable and is to be set to non-evictable, then size should
- * decrement. If a frame was previously non-evictable and is to be set to evictable,
- * then size should increment.
+ * 如果某帧之前可驱逐，现在被设为不可驱逐，则 size 应减少。
+ * 如果某帧之前不可驱逐，现在被设为可驱逐，则 size 应增加。
  *
- * If frame id is invalid, throw an exception or abort the process.
+ * 如果 frame id 非法，应抛出异常或终止进程。
  *
- * For other scenarios, this function should terminate without modifying anything.
+ * 其他场景下，该函数应直接结束且不修改任何内容。
  *
- * @param frame_id id of frame whose 'evictable' status will be modified
- * @param set_evictable whether the given frame is evictable or not
+ * @param frame_id 要修改“可驱逐”状态的帧 ID
+ * @param set_evictable 给定帧是否设为可驱逐
  */
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {}
 
 /**
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief Remove an evictable frame from replacer, along with its access history.
- * This function should also decrement replacer's size if removal is successful.
+ * @brief 从 replacer 中移除一个可驱逐帧及其访问历史。
+ * 如果移除成功，该函数也应减少 replacer 的大小。
  *
- * Note that this is different from evicting a frame, which always remove the frame
- * with largest backward k-distance. This function removes specified frame id,
- * no matter what its backward k-distance is.
+ * 注意这与驱逐帧不同。驱逐总是移除反向 k 距离最大的帧；
+ * 本函数移除指定 frame id，不考虑其反向 k 距离。
  *
- * If Remove is called on a non-evictable frame, throw an exception or abort the
- * process.
+ * 如果在不可驱逐帧上调用 Remove，应抛出异常或终止进程。
  *
- * If specified frame is not found, directly return from this function.
+ * 如果找不到指定帧，应直接返回。
  *
- * @param frame_id id of frame to be removed
+ * @param frame_id 要移除的帧 ID
  */
 void LRUKReplacer::Remove(frame_id_t frame_id) {}
 
 /**
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief Return replacer's size, which tracks the number of evictable frames.
+ * @brief 返回 replacer 的大小，即可驱逐帧的数量。
  *
  * @return size_t
  */
 auto LRUKReplacer::Size() -> size_t { return 0; }
 
-}  // namespace bustub
+}  // 命名空间 bustub

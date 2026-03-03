@@ -2,11 +2,11 @@
 //
 //                         BusTub
 //
-// lru_replacer.h
+// 文件：lru_replacer.h
 //
-// Identification: src/include/buffer/lru_replacer.h
+// 标识：src/include/buffer/lru_replacer.h
 //
-// Copyright (c) 2015-2025, Carnegie Mellon University Database Group
+// 版权所有 (c) 2015-2025，卡内基梅隆大学数据库小组
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +22,7 @@
 namespace bustub {
 
 /**
- * LRUReplacer implements the Least Recently Used replacement policy.
+ * LRUReplacer 实现最近最少使用（LRU）替换策略。
  */
 class LRUReplacer : public Replacer {
  public:
@@ -39,7 +39,7 @@ class LRUReplacer : public Replacer {
   auto Size() -> size_t override;
 
  private:
-  // TODO(student): implement me!
+  // TODO(student): 请实现！
 };
 
-}  // namespace bustub
+}  // 命名空间 bustub

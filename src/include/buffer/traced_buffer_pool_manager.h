@@ -31,4 +31,4 @@ class TracedBufferPoolManager {
   auto GetWrites() -> size_t { return writes_; }
 };
 
-};  // namespace bustub
+};  // 命名空间 bustub

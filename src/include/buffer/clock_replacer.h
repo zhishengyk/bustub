@@ -2,11 +2,11 @@
 //
 //                         BusTub
 //
-// clock_replacer.h
+// 文件：clock_replacer.h
 //
-// Identification: src/include/buffer/clock_replacer.h
+// 标识：src/include/buffer/clock_replacer.h
 //
-// Copyright (c) 2015-2025, Carnegie Mellon University Database Group
+// 版权所有 (c) 2015-2025，卡内基梅隆大学数据库小组
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +22,7 @@
 namespace bustub {
 
 /**
- * ClockReplacer implements the clock replacement policy, which approximates the Least Recently Used policy.
+ * ClockReplacer 实现时钟替换策略，它是最近最少使用（LRU）策略的近似。
  */
 class ClockReplacer : public Replacer {
  public:
@@ -39,7 +39,7 @@ class ClockReplacer : public Replacer {
   auto Size() -> size_t override;
 
  private:
-  // TODO(student): implement me!
+  // TODO(student): 请实现！
 };
 
-}  // namespace bustub
+}  // 命名空间 bustub

@@ -2,11 +2,11 @@
 //
 //                         BusTub
 //
-// clock_replacer.cpp
+// 文件：clock_replacer.cpp
 //
-// Identification: src/buffer/clock_replacer.cpp
+// 标识：src/buffer/clock_replacer.cpp
 //
-// Copyright (c) 2015-2025, Carnegie Mellon University Database Group
+// 版权所有 (c) 2015-2025，卡内基梅隆大学数据库小组
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,13 +15,13 @@
 namespace bustub {
 
 /**
- * Create a new ClockReplacer.
- * @param num_pages the maximum number of pages the ClockReplacer will be required to store
+ * 创建一个新的 ClockReplacer。
+ * @param num_pages ClockReplacer 需要存储的最大页数
  */
 ClockReplacer::ClockReplacer(size_t num_pages) {}
 
 /**
- * Destroys the ClockReplacer.
+ * 销毁 ClockReplacer。
  */
 ClockReplacer::~ClockReplacer() = default;
 
@@ -33,4 +33,4 @@ void ClockReplacer::Unpin(frame_id_t frame_id) {}
 
 auto ClockReplacer::Size() -> size_t { return 0; }
 
-}  // namespace bustub
+}  // 命名空间 bustub

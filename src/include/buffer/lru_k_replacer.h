@@ -2,11 +2,11 @@
 //
 //                         BusTub
 //
-// lru_k_replacer.h
+// 文件：lru_k_replacer.h
 //
-// Identification: src/include/buffer/lru_k_replacer.h
+// 标识：src/include/buffer/lru_k_replacer.h
 //
-// Copyright (c) 2015-2025, Carnegie Mellon University Database Group
+// 版权所有 (c) 2015-2025，卡内基梅隆大学数据库小组
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,8 +27,8 @@ namespace bustub {
 
 class LRUKNode {
  private:
-  /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
-  // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
+  /** 该页面最近 K 次访问时间戳的历史记录。最久远的时间戳存放在前面。 */
+  // 如果开始使用这些字段，请移除 maybe_unused。你可以按需调整成员变量。
 
   [[maybe_unused]] std::list<size_t> history_;
   [[maybe_unused]] size_t k_;
@@ -37,15 +37,13 @@ class LRUKNode {
 };
 
 /**
- * LRUKReplacer implements the LRU-k replacement policy.
+ * LRUKReplacer 实现 LRU-k 替换策略。
  *
- * The LRU-k algorithm evicts a frame whose backward k-distance is maximum
- * of all frames. Backward k-distance is computed as the difference in time between
- * current timestamp and the timestamp of kth previous access.
+ * LRU-k 算法会驱逐反向 k 距离在所有帧中最大的帧。
+ * 反向 k 距离定义为：当前时间戳与该帧第 k 次最近访问时间戳的时间差。
  *
- * A frame with less than k historical references is given
- * +inf as its backward k-distance. When multiple frames have +inf backward k-distance,
- * classical LRU algorithm is used to choose victim.
+ * 若某个帧的历史访问次数少于 k，则其反向 k 距离视为 +inf。
+ * 当多个帧的反向 k 距离都为 +inf 时，使用经典 LRU 算法选择受害帧。
  */
 class LRUKReplacer {
  public:
@@ -54,9 +52,9 @@ class LRUKReplacer {
   DISALLOW_COPY_AND_MOVE(LRUKReplacer);
 
   /**
-   * TODO(P1): Add implementation
+   * TODO(P1): 补充实现
    *
-   * @brief Destroys the LRUReplacer.
+   * @brief 销毁 LRUKReplacer。
    */
   ~LRUKReplacer() = default;
 
@@ -71,8 +69,8 @@ class LRUKReplacer {
   auto Size() -> size_t;
 
  private:
-  // TODO(student): implement me! You can replace these member variables as you like.
-  // Remove maybe_unused if you start using them.
+  // TODO(student): 请实现！你可以按需替换这些成员变量。
+  // 如果开始使用这些字段，请移除 maybe_unused。
   [[maybe_unused]] std::unordered_map<frame_id_t, LRUKNode> node_store_;
   [[maybe_unused]] size_t current_timestamp_{0};
   [[maybe_unused]] size_t curr_size_{0};
@@ -81,4 +79,4 @@ class LRUKReplacer {
   [[maybe_unused]] std::mutex latch_;
 };
 
-}  // namespace bustub
+}  // 命名空间 bustub

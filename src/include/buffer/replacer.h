@@ -2,11 +2,11 @@
 //
 //                         BusTub
 //
-// replacer.h
+// 文件：replacer.h
 //
-// Identification: src/include/buffer/replacer.h
+// 标识：src/include/buffer/replacer.h
 //
-// Copyright (c) 2015-2025, Carnegie Mellon University Database Group
+// 版权所有 (c) 2015-2025，卡内基梅隆大学数据库小组
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,7 +17,7 @@
 namespace bustub {
 
 /**
- * Replacer is an abstract class that tracks page usage.
+ * Replacer 是用于跟踪页面使用情况的抽象类。
  */
 class Replacer {
  public:
@@ -25,26 +25,26 @@ class Replacer {
   virtual ~Replacer() = default;
 
   /**
-   * Remove the victim frame as defined by the replacement policy.
-   * @param[out] frame_id id of frame that was removed, nullptr if no victim was found
-   * @return true if a victim frame was found, false otherwise
+   * 根据替换策略移除受害帧。
+   * @param[out] frame_id 被移除的帧 ID；若未找到受害帧则为 nullptr
+   * @return 若找到受害帧返回 true，否则返回 false
    */
   virtual auto Victim(frame_id_t *frame_id) -> bool = 0;
 
   /**
-   * Pins a frame, indicating that it should not be victimized until it is unpinned.
-   * @param frame_id the id of the frame to pin
+   * 将一个帧置为 pin，表示在 unpin 前不应被作为受害帧。
+   * @param frame_id 要 pin 的帧 ID
    */
   virtual void Pin(frame_id_t frame_id) = 0;
 
   /**
-   * Unpins a frame, indicating that it can now be victimized.
-   * @param frame_id the id of the frame to unpin
+   * 将一个帧解除 pin，表示现在可以被作为受害帧。
+   * @param frame_id 要 unpin 的帧 ID
    */
   virtual void Unpin(frame_id_t frame_id) = 0;
 
-  /** @return the number of elements in the replacer that can be victimized */
+  /** @return replacer 中可作为受害帧的元素数量 */
   virtual auto Size() -> size_t = 0;
 };
 
-}  // namespace bustub
+}  // 命名空间 bustub

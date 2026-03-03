@@ -5,13 +5,14 @@
 //
 // arc_replacer.cpp
 //
-// Identification: src/buffer/arc_replacer.cpp
+// 标识：src/buffer/arc_replacer.cpp
 //
-// Copyright (c) 2015-2025, Carnegie Mellon University Database Group
+// 版权所有 (c) 2015-2025，卡内基梅隆大学数据库小组
 //
 //===----------------------------------------------------------------------===//
 
 #include "buffer/arc_replacer.h"
+
 #include <optional>
 #include "common/config.h"
 
@@ -19,108 +20,117 @@ namespace bustub {
 
 /**
  *
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief a new ArcReplacer, with lists initialized to be empty and target size to 0
- * @param num_frames the maximum number of frames the ArcReplacer will be required to cache
+ * @brief 创建一个新的 ArcReplacer，列表初始为空，目标大小为 0
+ * @param num_frames ArcReplacer 需要缓存的最大帧数
  */
 ArcReplacer::ArcReplacer(size_t num_frames) : replacer_size_(num_frames) {}
 
 /**
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief Performs the Replace operation as described by the writeup
- * that evicts from either mfu_ or mru_ into its corresponding ghost list
- * according to balancing policy.
+ * @brief 按照说明文档执行 Replace 操作，
+ * 根据平衡策略从 mfu_ 或 mru_ 中驱逐页面到对应的 ghost 列表。
  *
- * If you wish to refer to the original ARC paper, please note that there are
- * two changes in our implementation:
- * 1. When the size of mru_ equals the target size, we don't check
- * the last access as the paper did when deciding which list to evict from.
- * This is fine since the original decision is stated to be arbitrary.
- * 2. Entries that are not evictable are skipped. If all entries from the desired side
- * (mru_ / mfu_) are pinned, we instead try victimize the other side (mfu_ / mru_),
- * and move it to its corresponding ghost list (mfu_ghost_ / mru_ghost_).
+ * 如果你想参考原始 ARC 论文，请注意我们的实现有两个变化：
+ * 1. 当 mru_ 的大小等于目标大小时，在决定从哪个列表驱逐时，
+ * 我们不会像论文那样检查最后一次访问。
+ * 这没有问题，因为原论文中该决策本身就是任意的。
+ * 2. 不可驱逐条目会被跳过。如果目标侧（mru_ / mfu_）的条目都被 pin 住，
+ * 我们会尝试驱逐另一侧（mfu_ / mru_），并将其移动到对应 ghost 列表
+ * （mfu_ghost_ / mru_ghost_）。
  *
- * @return frame id of the evicted frame, or std::nullopt if cannot evict
+ * @return 被驱逐帧的 frame id；若无法驱逐则返回 std::nullopt
  */
 auto ArcReplacer::Evict() -> std::optional<frame_id_t> { return std::nullopt; }
 
 /**
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief Record access to a frame, adjusting ARC bookkeeping accordingly
- * by bring the accessed page to the front of mfu_ if it exists in any of the lists
- * or the front of mru_ if it does not.
+ * @brief 记录一次帧访问，并相应调整 ARC 的元数据：
+ * 若访问页已存在于任一列表中，则将其移动到 mfu_ 头部；
+ * 否则将其放到 mru_ 头部。
  *
- * Performs the operations EXCEPT REPLACE described in original paper, which is
- * handled by `Evict()`.
+ * 执行原论文中除 REPLACE 之外的操作，REPLACE 由 `Evict()` 处理。
  *
- * Consider the following four cases, handle accordingly:
- * 1. Access hits mru_ or mfu_
- * 2/3. Access hits mru_ghost_ / mfu_ghost_
- * 4. Access misses all the lists
+ * 请按以下四种情况处理：
+ * 1. 访问命中 mru_ 或 mfu_
+ * 2/3. 访问命中 mru_ghost_ / mfu_ghost_
+ * 4. 访问未命中所有列表
  *
- * This routine performs all changes to the four lists as preperation
- * for `Evict()` to simply find and evict a victim into ghost lists.
+ * 该过程会完成对四个列表的所有修改，为 `Evict()` 简化为
+ * “查找并驱逐受害者到 ghost 列表”做准备。
  *
- * Note that frame_id is used as identifier for alive pages and
- * page_id is used as identifier for the ghost pages, since page_id is
- * the unique identifier to the page after it's dead.
- * Using page_id for alive pages should be the same since it's one to one mapping,
- * but using frame_id is slightly more intuitive.
+ * 注意：frame_id 用作存活页面的标识，
+ * page_id 用作 ghost 页面标识，因为页面“死亡”后 page_id 才是唯一标识。
+ * 对存活页面使用 page_id 理论上等价（一一映射），
+ * 但使用 frame_id 更直观。
  *
- * @param frame_id id of frame that received a new access.
- * @param page_id id of page that is mapped to the frame.
- * @param access_type type of access that was received. This parameter is only needed for
- * leaderboard tests.
+ * @param frame_id 收到新访问的帧 ID。
+ * @param page_id 映射到该帧的页面 ID。
+ * @param access_type 本次访问类型。该参数仅用于排行榜测试。
  */
 void ArcReplacer::RecordAccess(frame_id_t frame_id, page_id_t page_id, [[maybe_unused]] AccessType access_type) {}
 
 /**
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief Toggle whether a frame is evictable or non-evictable. This function also
- * controls replacer's size. Note that size is equal to number of evictable entries.
+ * @brief 切换帧是否可驱逐。该函数也会控制 replacer 的大小。
+ * 注意 size 等于可驱逐条目的数量。
  *
- * If a frame was previously evictable and is to be set to non-evictable, then size should
- * decrement. If a frame was previously non-evictable and is to be set to evictable,
- * then size should increment.
+ * 如果某帧之前可驱逐，现在设为不可驱逐，则 size 应减少。
+ * 如果某帧之前不可驱逐，现在设为可驱逐，则 size 应增加。
  *
- * If frame id is invalid, throw an exception or abort the process.
+ * 如果 frame id 非法，应抛出异常或终止进程。
  *
- * For other scenarios, this function should terminate without modifying anything.
+ * 其他场景下，该函数应直接结束且不修改任何内容。
  *
- * @param frame_id id of frame whose 'evictable' status will be modified
- * @param set_evictable whether the given frame is evictable or not
+ * @param frame_id 要修改“可驱逐”状态的帧 ID
+ * @param set_evictable 给定帧是否设为可驱逐
  */
-void ArcReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {}
+void ArcReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
+    std::scoped_lock lock(latch_);
+    auto now_frame = alive_map_.find(frame_id);
+    if(now_frame == alive_map_.end()){
+        return;
+    }
+    if(now_frame->second->evictable_ == 0 && set_evictable == 1) {
+        curr_size_ ++ ;
+    }
+    if(now_frame->second->evictable_ == 1 && set_evictable == 0) {
+        curr_size_ -- ;
+    }
+    now_frame->second->evictable_ = set_evictable;
+}
 
 /**
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief Remove an evictable frame from replacer.
- * This function should also decrement replacer's size if removal is successful.
+ * @brief 从 replacer 中移除一个可驱逐帧。
+ * 如果移除成功，该函数也应减少 replacer 的大小。
  *
- * Note that this is different from evicting a frame, which always remove the frame
- * decided by the ARC algorithm.
+ * 注意这与驱逐帧不同。驱逐总是移除 ARC 算法决定的帧。
  *
- * If Remove is called on a non-evictable frame, throw an exception or abort the
- * process.
+ * 如果在不可驱逐帧上调用 Remove，应抛出异常或终止进程。
  *
- * If specified frame is not found, directly return from this function.
+ * 如果找不到指定帧，应直接返回。
  *
- * @param frame_id id of frame to be removed
+ * @param frame_id 要移除的帧 ID
  */
 void ArcReplacer::Remove(frame_id_t frame_id) {}
 
 /**
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief Return replacer's size, which tracks the number of evictable frames.
+ * @brief 返回 replacer 的大小，即可驱逐帧的数量。
  *
  * @return size_t
  */
-auto ArcReplacer::Size() -> size_t { return 0; }
 
-}  // namespace bustub
+auto ArcReplacer::Size() -> size_t { 
+    std::scoped_lock lock(latch_);
+    return curr_size_;
+}
+
+}  // 命名空间 bustub
