@@ -1,0 +1,5 @@
+if(EXISTS "/home/bustub/build/test/arc_replacer_test[1]_tests.cmake")
+  include("/home/bustub/build/test/arc_replacer_test[1]_tests.cmake")
+else()
+  add_test(arc_replacer_test_NOT_BUILT arc_replacer_test_NOT_BUILT)
+endif()

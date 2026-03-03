@@ -1,0 +1,5 @@
+if(EXISTS "/home/bustub/build/test/skiplist_test[1]_tests.cmake")
+  include("/home/bustub/build/test/skiplist_test[1]_tests.cmake")
+else()
+  add_test(skiplist_test_NOT_BUILT skiplist_test_NOT_BUILT)
+endif()
