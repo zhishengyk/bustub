@@ -34,6 +34,10 @@ struct FrameStatus {
   frame_id_t frame_id_;
   bool evictable_;
   ArcStatus arc_status_;
+  // 当条目在 alive 列表（mru_/mfu_）中时，记录其 O(1) 定位迭代器。
+  std::list<frame_id_t>::iterator alive_pos_;
+  // 当条目在 ghost 列表（mru_ghost_/mfu_ghost_）中时，记录其 O(1) 定位迭代器。
+  std::list<page_id_t>::iterator ghost_pos_;
   FrameStatus(page_id_t pid, frame_id_t fid, bool ev, ArcStatus st)
       : page_id_(pid), frame_id_(fid), evictable_(ev), arc_status_(st) {}
 };
