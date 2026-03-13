@@ -47,6 +47,7 @@ void FrameHeader::Reset() {
   std::fill(data_.begin(), data_.end(), 0);
   pin_count_.store(0);
   is_dirty_ = false;
+  page_id_.reset();
 }
 
 /**
@@ -117,7 +118,7 @@ auto BufferPoolManager::Size() const -> size_t { return num_frames_; }
  * @return 新分配页面的 page ID。
  */
 auto BufferPoolManager::NewPage() -> page_id_t { 
-  return next_page_id_;
+  return next_page_id_.fetch_add(1);
 }
 
 /**
@@ -203,7 +204,70 @@ auto BufferPoolManager::CheckedWritePage(page_id_t page_id, AccessType access_ty
  * 则返回 `std::nullopt`；否则返回 `ReadPageGuard`，保证对页面数据的共享只读访问。
  */
 auto BufferPoolManager::CheckedReadPage(page_id_t page_id, AccessType access_type) -> std::optional<ReadPageGuard> {
-  UNIMPLEMENTED("TODO(P1): Add implementation.");
+  std::scoped_lock lock(*bpm_latch_);
+  auto it = page_table_.find(page_id);
+  if(it != page_table_.end()){
+    auto frame_id = it->second;
+    auto frame = frames_[frame_id];
+    frame->pin_count_.fetch_add(1);
+    replacer_->SetEvictable(frame_id,false);
+    replacer_->RecordAccess(frame_id,page_id,access_type);
+    return ReadPageGuard(page_id,frame,replacer_,bpm_latch_,disk_scheduler_);
+  }
+  else{
+    frame_id_t frame_id;
+    std::shared_ptr<FrameHeader> frame;
+
+    if(!free_frames_.empty()){
+      frame_id = free_frames_.front();
+      free_frames_.pop_front();
+      frame = frames_[frame_id];
+    }
+    else{
+      auto victim_opt = replacer_->Evict();
+      if(!victim_opt.has_value()){
+        return std::nullopt;
+      }
+      frame_id = victim_opt.value();
+      frame = frames_[frame_id];
+      if(frame->page_id_.has_value()){
+        auto old_page_id = frame->page_id_.value();
+        page_table_.erase(old_page_id);
+        if(frame->is_dirty_){
+          auto promise = disk_scheduler_->CreatePromise();
+          auto future = promise.get_future();
+
+          DiskRequest write_req{true,frame->GetDataMut(),old_page_id,std::move(promise)};
+          std::vector<DiskRequest> requests;
+          requests.push_back(std::move(write_req));
+          
+          disk_scheduler_->Schedule(requests);
+          future.get();
+        }
+      }
+      
+      frame->Reset();
+      
+      auto promise = disk_scheduler_->CreatePromise();
+      auto future = promise.get_future();
+
+      DiskRequest read_req{false, frame->GetDataMut(),page_id,std::move(promise)};
+      std::vector <DiskRequest> requests;
+      requests.push_back(std::move(read_req));
+
+      disk_scheduler_->Schedule(requests);
+      future.get();
+
+      frame->page_id_ = page_id;
+      frame->pin_count_.store(1);
+      frame->is_dirty_ = false;
+
+      page_table_[page_id] = frame_id;
+      replacer_->RecordAccess(frame_id,page_id,access_type);
+      replacer_->SetEvictable(frame_id,false);
+    }
+
+  }
 }
 
 /**
@@ -349,7 +413,13 @@ void BufferPoolManager::FlushAllPages() { UNIMPLEMENTED("TODO(P1): Add implement
  * @return std::optional<size_t> 若页面存在则返回 pin count；否则返回 `std::nullopt`。
  */
 auto BufferPoolManager::GetPinCount(page_id_t page_id) -> std::optional<size_t> {
-  UNIMPLEMENTED("TODO(P1): Add implementation.");
+  std::scoped_lock lock(*bpm_latch_);
+  auto it = page_table_.find(page_id);
+  if(it == page_table_.end()){
+    return std::nullopt;
+  }
+  auto frame_id = it->second;
+  return frames_[frame_id]->pin_count_.load();
 }
 
 }  // 命名空间 bustub

@@ -14,6 +14,7 @@
 
 #include <list>
 #include <memory>
+#include <optional>
 #include <shared_mutex>
 #include <unordered_map>
 #include <vector>
@@ -77,6 +78,7 @@ class FrameHeader {
 
   /** @brief 脏页标记。 */
   bool is_dirty_;
+  std::optional<page_id_t> page_id_;
 
   /**
    * @brief 指向该帧所持有页面数据的指针。
