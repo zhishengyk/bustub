@@ -18,13 +18,13 @@
 namespace bustub {
 
 DiskScheduler::DiskScheduler(DiskManager *disk_manager) : disk_manager_(disk_manager) {
-  UNIMPLEMENTED("TODO(P1): Add implementation.");
-  // Spawn the background thread
+  
+  // 启动后台工作线程
   background_thread_.emplace([&] { StartWorkerThread(); });
 }
 
 DiskScheduler::~DiskScheduler() {
-  // Put a `std::nullopt` in the queue to signal to exit the loop
+  // 向队列中放入一个 `std::nullopt`，通知后台线程退出循环
   request_queue_.Put(std::nullopt);
   if (background_thread_.has_value()) {
     background_thread_->join();
@@ -32,22 +32,45 @@ DiskScheduler::~DiskScheduler() {
 }
 
 /**
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief Schedules a request for the DiskManager to execute.
+ * @brief 调度一组请求，由 DiskManager 执行。
  *
- * @param requests The requests to be scheduled.
+ * @param requests 待调度的请求集合。
  */
-void DiskScheduler::Schedule(std::vector<DiskRequest> &requests) {}
+void DiskScheduler::Schedule(std::vector<DiskRequest> &requests) {
+    for(auto &request : requests){
+      request_queue_.Put(std::move(request));
+    }
+}
+
 
 /**
- * TODO(P1): Add implementation
+ * TODO(P1): 补充实现
  *
- * @brief Background worker thread function that processes scheduled requests.
+ * @brief 后台工作线程函数，负责处理已经调度的请求。
  *
- * The background thread needs to process requests while the DiskScheduler exists, i.e., this function should not
- * return until ~DiskScheduler() is called. At that point you need to make sure that the function does return.
+ * 后台线程在 DiskScheduler 生命周期内需要持续处理请求，也就是说，在 `~DiskScheduler()`
+ * 被调用之前，这个函数都不应该返回；而当析构发生时，你又需要确保该函数能够正常退出。
  */
-void DiskScheduler::StartWorkerThread() {}
+void DiskScheduler::StartWorkerThread() {
+   while(true){
+    auto request_opt = request_queue_.Get();
 
+    if(!request_opt.has_value()){
+      return ;
+    }
+
+    auto request = std::move(request_opt.value());
+
+    if (request.is_write_) {
+      disk_manager_->WritePage(request.page_id_, request.data_);
+    } else {
+      disk_manager_->ReadPage(request.page_id_, request.data_);
+    }
+
+    request.callback_.set_value(true);
+  }
+}
+ 
 }  // namespace bustub

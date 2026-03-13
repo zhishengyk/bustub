@@ -116,7 +116,9 @@ auto BufferPoolManager::Size() const -> size_t { return num_frames_; }
  *
  * @return 新分配页面的 page ID。
  */
-auto BufferPoolManager::NewPage() -> page_id_t { UNIMPLEMENTED("TODO(P1): Add implementation."); }
+auto BufferPoolManager::NewPage() -> page_id_t { 
+  return next_page_id_;
+}
 
 /**
  * @brief 从数据库中删除一个页面（包括磁盘和内存中的副本）。
