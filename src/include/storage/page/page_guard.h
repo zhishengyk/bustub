@@ -4,9 +4,9 @@
 //
 // page_guard.h
 //
-// Identification: src/include/storage/page/page_guard.h
+// 文件标识: src/include/storage/page/page_guard.h
 //
-// Copyright (c) 2015-2025, Carnegie Mellon University Database Group
+// 版权所有 (c) 2015-2025, Carnegie Mellon University Database Group
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,29 +25,29 @@ class BufferPoolManager;
 class FrameHeader;
 
 /**
- * @brief An RAII object that grants thread-safe read access to a page of data.
+ * @brief 一个提供页面数据线程安全读访问的 RAII 对象。
  *
- * The _only_ way that the BusTub system should interact with the buffer pool's page data is via page guards. Since
- * `ReadPageGuard` is an RAII object, the system never has to manually lock and unlock a page's latch.
+ * 在 BusTub 系统中，与 buffer pool 中页面数据交互的_唯一_方式应该是通过 page guard。
+ * 由于 `ReadPageGuard` 是一个 RAII 对象，系统不需要手动加锁和解锁页面闩锁。
  *
- * With `ReadPageGuard`s, there can be multiple threads that share read access to a page's data. However, the existence
- * of any `ReadPageGuard` on a page implies that no thread can be mutating the page's data.
+ * 对于 `ReadPageGuard`，可以有多个线程共享读取同一个页面的数据。
+ * 但是，只要某个页面上存在任意一个 `ReadPageGuard`，就不应该有线程修改该页面数据。
  */
 class ReadPageGuard {
-  /** @brief Only the buffer pool manager is allowed to construct a valid `ReadPageGuard.` */
+  /** @brief 只有 buffer pool manager 可以构造一个有效的 `ReadPageGuard`。 */
   friend class BufferPoolManager;
 
  public:
   /**
-   * @brief The default constructor for a `ReadPageGuard`.
+   * @brief `ReadPageGuard` 的默认构造函数。
    *
-   * Note that we do not EVER want use a guard that has only been default constructed. The only reason we even define
-   * this default constructor is to enable placing an "uninitialized" guard on the stack that we can later move assign
-   * via `=`.
+   * 注意，我们绝对不希望使用一个仅通过默认构造创建出来的 guard。
+   * 我们之所以定义这个默认构造函数，只是为了允许先在栈上放一个“未初始化”的 guard，
+   * 之后再通过 `=` 对它进行移动赋值。
    *
-   * **Use of an uninitialized page guard is undefined behavior.**
+   * **使用未初始化的 page guard 属于未定义行为。**
    *
-   * In other words, the only way to get a valid `ReadPageGuard` is through the buffer pool manager.
+   * 换句话说，获得一个有效 `ReadPageGuard` 的唯一方式是通过 buffer pool manager。
    */
   ReadPageGuard() = default;
 
@@ -67,89 +67,88 @@ class ReadPageGuard {
   ~ReadPageGuard();
 
  private:
-  /** @brief Only the buffer pool manager is allowed to construct a valid `ReadPageGuard.` */
+  /** @brief 只有 buffer pool manager 可以构造一个有效的 `ReadPageGuard`。 */
   explicit ReadPageGuard(page_id_t page_id, std::shared_ptr<FrameHeader> frame, std::shared_ptr<ArcReplacer> replacer,
                          std::shared_ptr<std::mutex> bpm_latch, std::shared_ptr<DiskScheduler> disk_scheduler);
 
-  /** @brief The page ID of the page we are guarding. */
-  page_id_t page_id_;
+  /** @brief 当前 guard 正在保护的页面 ID。 */
+  page_id_t page_id_{INVALID_PAGE_ID};
 
   /**
-   * @brief The frame that holds the page this guard is protecting.
+   * @brief 保存当前 guard 所保护页面的 frame。
    *
-   * Almost all operations of this page guard should be done via this shared pointer to a `FrameHeader`.
+   * 这个 page guard 的几乎所有操作都应该通过这个指向 `FrameHeader` 的共享指针完成。
    */
   std::shared_ptr<FrameHeader> frame_;
 
   /**
-   * @brief A shared pointer to the buffer pool's replacer.
+   * @brief 指向 buffer pool 的 replacer 的共享指针。
    *
-   * Since the buffer pool cannot know when this `ReadPageGuard` gets destructed, we maintain a pointer to the buffer
-   * pool's replacer in order to set the frame as evictable on destruction.
+   * 由于 buffer pool 无法知道这个 `ReadPageGuard` 何时析构，我们需要保存一个指向
+   * buffer pool replacer 的指针，以便在析构时把对应 frame 重新标记为可驱逐。
    */
   std::shared_ptr<ArcReplacer> replacer_;
 
   /**
-   * @brief A shared pointer to the buffer pool's latch.
+   * @brief 指向 buffer pool 闩锁的共享指针。
    *
-   * Since the buffer pool cannot know when this `ReadPageGuard` gets destructed, we maintain a pointer to the buffer
-   * pool's latch for when we need to update the frame's eviction state in the buffer pool replacer.
+   * 由于 buffer pool 无法知道这个 `ReadPageGuard` 何时析构，我们需要保存一个指向
+   * buffer pool 闩锁的指针，以便在需要更新 replacer 中 frame 的驱逐状态时使用。
    */
   std::shared_ptr<std::mutex> bpm_latch_;
 
   /**
-   * @brief A shared pointer to the buffer pool's disk scheduler.
+   * @brief 指向 buffer pool 磁盘调度器的共享指针。
    *
-   * Used when flushing pages to disk.
+   * 在将页面刷回磁盘时使用。
    */
   std::shared_ptr<DiskScheduler> disk_scheduler_;
 
   /**
-   * @brief The validity flag for this `ReadPageGuard`.
+   * @brief 这个 `ReadPageGuard` 的有效性标记。
    *
-   * Since we must allow for the construction of invalid page guards (see the documentation above), we must maintain
-   * some sort of state that tells us if this page guard is valid or not. Note that the default constructor will
-   * automatically set this field to `false`.
+   * 由于我们必须允许构造无效的 page guard（见上面的说明），因此需要维护某种状态来表明
+   * 当前 page guard 是否有效。注意，默认构造函数会自动把这个字段设为 `false`。
    *
-   * If we did not maintain this flag, then the move constructor / move assignment operators could attempt to destruct
-   * or `Drop()` invalid members, causing a segmentation fault.
+   * 如果没有这个标记，那么移动构造函数 / 移动赋值运算符在析构或调用 `Drop()` 时
+   * 可能会错误地处理无效成员，从而导致段错误。
    */
   bool is_valid_{false};
 
   /**
-   * TODO(P1): You may add any fields under here that you think are necessary.
+   * TODO(P1): 你可以在这里添加你认为必要的字段。
    *
-   * If you want extra (nonexistent) style points, and you want to be extra fancy, then you can look into the
-   * `std::shared_lock` type and use that for the latching mechanism instead of manually calling `lock` and `unlock`.
+   * 如果你想写得更“花”一点，可以研究一下 `std::shared_lock`，并用它来实现加锁逻辑，
+   * 而不是手动调用 `lock` 和 `unlock`。
    */
 };
 
 /**
- * @brief An RAII object that grants thread-safe write access to a page of data.
+ * @brief 一个提供页面数据线程安全写访问的 RAII 对象。
  *
- * The _only_ way that the BusTub system should interact with the buffer pool's page data is via page guards. Since
- * `WritePageGuard` is an RAII object, the system never has to manually lock and unlock a page's latch.
+ * 在 BusTub 系统中，与 buffer pool 中页面数据交互的_唯一_方式应该是通过 page guard。
+ * 由于 `WritePageGuard` 是一个 RAII 对象，系统不需要手动加锁和解锁页面闩锁。
  *
- * With a `WritePageGuard`, there can be only be one thread that has exclusive ownership over the page's data. This
- * means that the owner of the `WritePageGuard` can mutate the page's data as much as they want. However, the existence
- * of a `WritePageGuard` implies that no other `WritePageGuard` or any `ReadPageGuard`s for the same page can exist at
- * the same time.
+ * 对于 `WritePageGuard`，同一时间只能有一个线程独占拥有页面数据的访问权。
+ * 这意味着持有 `WritePageGuard` 的线程可以任意修改页面数据。
+ * 但是，只要某个页面上存在 `WritePageGuard`，同一时间就不应该再存在其他
+ * `WritePageGuard` 或该页面上的 `ReadPageGuard`。
  */
 class WritePageGuard {
-  /** @brief Only the buffer pool manager is allowed to construct a valid `WritePageGuard.` */
+  /** @brief 只有 buffer pool manager 可以构造一个有效的 `WritePageGuard`。 */
   friend class BufferPoolManager;
 
  public:
   /**
-   * @brief The default constructor for a `WritePageGuard`.
+   * @brief `WritePageGuard` 的默认构造函数。
    *
-   * Note that we do not EVER want use a guard that has only been default constructed. The only reason we even define
-   * this default constructor is to enable placing an "uninitialized" guard on the stack that we can later move assign
-   * via `=`.
+   * 注意，我们绝对不希望使用一个仅通过默认构造创建出来的 guard。
+   * 我们之所以定义这个默认构造函数，只是为了允许先在栈上放一个“未初始化”的 guard，
+   * 之后再通过 `=` 对它进行移动赋值。
    *
-   * **Use of an uninitialized page guard is undefined behavior.**
+   * **使用未初始化的 page guard 属于未定义行为。**
    *
-   * In other words, the only way to get a valid `WritePageGuard` is through the buffer pool manager.
+   * 换句话说，获得一个有效 `WritePageGuard` 的唯一方式是通过 buffer pool manager。
    */
   WritePageGuard() = default;
 
@@ -174,60 +173,59 @@ class WritePageGuard {
   ~WritePageGuard();
 
  private:
-  /** @brief Only the buffer pool manager is allowed to construct a valid `WritePageGuard.` */
+  /** @brief 只有 buffer pool manager 可以构造一个有效的 `WritePageGuard`。 */
   explicit WritePageGuard(page_id_t page_id, std::shared_ptr<FrameHeader> frame, std::shared_ptr<ArcReplacer> replacer,
                           std::shared_ptr<std::mutex> bpm_latch, std::shared_ptr<DiskScheduler> disk_scheduler);
 
-  /** @brief The page ID of the page we are guarding. */
-  page_id_t page_id_;
+  /** @brief 当前 guard 正在保护的页面 ID。 */
+  page_id_t page_id_{INVALID_PAGE_ID};
 
   /**
-   * @brief The frame that holds the page this guard is protecting.
+   * @brief 保存当前 guard 所保护页面的 frame。
    *
-   * Almost all operations of this page guard should be done via this shared pointer to a `FrameHeader`.
+   * 这个 page guard 的几乎所有操作都应该通过这个指向 `FrameHeader` 的共享指针完成。
    */
   std::shared_ptr<FrameHeader> frame_;
 
   /**
-   * @brief A shared pointer to the buffer pool's replacer.
+   * @brief 指向 buffer pool 的 replacer 的共享指针。
    *
-   * Since the buffer pool cannot know when this `WritePageGuard` gets destructed, we maintain a pointer to the buffer
-   * pool's replacer in order to set the frame as evictable on destruction.
+   * 由于 buffer pool 无法知道这个 `WritePageGuard` 何时析构，我们需要保存一个指向
+   * buffer pool replacer 的指针，以便在析构时把对应 frame 重新标记为可驱逐。
    */
   std::shared_ptr<ArcReplacer> replacer_;
 
   /**
-   * @brief A shared pointer to the buffer pool's latch.
+   * @brief 指向 buffer pool 闩锁的共享指针。
    *
-   * Since the buffer pool cannot know when this `WritePageGuard` gets destructed, we maintain a pointer to the buffer
-   * pool's latch for when we need to update the frame's eviction state in the buffer pool replacer.
+   * 由于 buffer pool 无法知道这个 `WritePageGuard` 何时析构，我们需要保存一个指向
+   * buffer pool 闩锁的指针，以便在需要更新 replacer 中 frame 的驱逐状态时使用。
    */
   std::shared_ptr<std::mutex> bpm_latch_;
 
   /**
-   * @brief A shared pointer to the buffer pool's disk scheduler.
+   * @brief 指向 buffer pool 磁盘调度器的共享指针。
    *
-   * Used when flushing pages to disk.
+   * 在将页面刷回磁盘时使用。
    */
   std::shared_ptr<DiskScheduler> disk_scheduler_;
 
   /**
-   * @brief The validity flag for this `WritePageGuard`.
+   * @brief 这个 `WritePageGuard` 的有效性标记。
    *
-   * Since we must allow for the construction of invalid page guards (see the documentation above), we must maintain
-   * some sort of state that tells us if this page guard is valid or not. Note that the default constructor will
-   * automatically set this field to `false`.
+   * 由于我们必须允许构造无效的 page guard（见上面的说明），因此需要维护某种状态来表明
+   * 当前 page guard 是否有效。注意，默认构造函数会自动把这个字段设为 `false`。
    *
-   * If we did not maintain this flag, then the move constructor / move assignment operators could attempt to destruct
-   * or `Drop()` invalid members, causing a segmentation fault.
+   * 如果没有这个标记，那么移动构造函数 / 移动赋值运算符在析构或调用 `Drop()` 时
+   * 可能会错误地处理无效成员，从而导致段错误。
    */
   bool is_valid_{false};
 
   /**
-   * TODO(P1): You may add any fields under here that you think are necessary.
+   * TODO(P1): 你可以在这里添加你认为必要的字段。
    *
-   * If you want extra (nonexistent) style points, and you want to be extra fancy, then you can look into the
-   * `std::unique_lock` type and use that for the latching mechanism instead of manually calling `lock` and `unlock`.
+   * 如果你想写得更“花”一点，可以研究一下 `std::unique_lock`，并用它来实现加锁逻辑，
+   * 而不是手动调用 `lock` 和 `unlock`。
    */
 };
 
