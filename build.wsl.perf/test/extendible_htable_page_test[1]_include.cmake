@@ -1,0 +1,5 @@
+if(EXISTS "/mnt/d/my project/bustub/build.wsl.perf/test/extendible_htable_page_test[1]_tests.cmake")
+  include("/mnt/d/my project/bustub/build.wsl.perf/test/extendible_htable_page_test[1]_tests.cmake")
+else()
+  add_test(extendible_htable_page_test_NOT_BUILT extendible_htable_page_test_NOT_BUILT)
+endif()

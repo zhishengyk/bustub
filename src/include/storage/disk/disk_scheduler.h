@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <future>  // NOLINT
 #include <optional>
 #include <thread>  // NOLINT
@@ -41,6 +42,9 @@ struct DiskRequest {
 
   /** Callback used to signal to the request issuer when the request has been completed. */
   std::promise<bool> callback_;
+
+  /** Timestamp used for local profiling. */
+  uint64_t profile_enqueued_ns_{0};
 };
 
 /**

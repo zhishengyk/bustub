@@ -12,11 +12,13 @@
 
 #pragma once
 
+#include <condition_variable>  // NOLINT(build/c++11)
 #include <list>
 #include <memory>
 #include <optional>
 #include <shared_mutex>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "buffer/arc_replacer.h"
@@ -112,8 +114,8 @@ class BufferPoolManager {
   auto Size() const -> size_t;
   auto NewPage() -> page_id_t;
   auto DeletePage(page_id_t page_id) -> bool;
-  auto CheckedWritePage(page_id_t page_id, AccessType access_type = AccessType::Unknown)
-      -> std::optional<WritePageGuard>;
+  auto CheckedWritePage(page_id_t page_id,
+                        AccessType access_type = AccessType::Unknown) -> std::optional<WritePageGuard>;
   auto CheckedReadPage(page_id_t page_id, AccessType access_type = AccessType::Unknown) -> std::optional<ReadPageGuard>;
   auto WritePage(page_id_t page_id, AccessType access_type = AccessType::Unknown) -> WritePageGuard;
   auto ReadPage(page_id_t page_id, AccessType access_type = AccessType::Unknown) -> ReadPageGuard;
@@ -136,6 +138,7 @@ class BufferPoolManager {
    * TODO(P1): 建议将此注释替换为“该闩锁实际保护哪些内容”的具体说明。
    */
   std::shared_ptr<std::mutex> bpm_latch_;
+  std::condition_variable bpm_cv_;
 
   /** @brief 该缓冲池所管理帧对应的帧头集合。 */
   std::vector<std::shared_ptr<FrameHeader>> frames_;
@@ -145,6 +148,7 @@ class BufferPoolManager {
 
   /** @brief 不持有任何页面数据的空闲帧列表。 */
   std::list<frame_id_t> free_frames_;
+  std::unordered_set<page_id_t> pending_pages_;
 
   /** @brief 用于查找未 pin / 可驱逐候选页面的 replacer。 */
   std::shared_ptr<ArcReplacer> replacer_;
@@ -169,4 +173,4 @@ class BufferPoolManager {
    * 或该 `FrameHeader` 的下标。
    */
 };
-}  // 命名空间 bustub
+}  // namespace bustub

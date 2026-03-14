@@ -1,0 +1,5 @@
+if(EXISTS "/mnt/d/my project/bustub/build.wsl.perf/test/disk_manager_test[1]_tests.cmake")
+  include("/mnt/d/my project/bustub/build.wsl.perf/test/disk_manager_test[1]_tests.cmake")
+else()
+  add_test(disk_manager_test_NOT_BUILT disk_manager_test_NOT_BUILT)
+endif()

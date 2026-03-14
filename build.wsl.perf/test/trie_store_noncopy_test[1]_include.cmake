@@ -1,0 +1,5 @@
+if(EXISTS "/mnt/d/my project/bustub/build.wsl.perf/test/trie_store_noncopy_test[1]_tests.cmake")
+  include("/mnt/d/my project/bustub/build.wsl.perf/test/trie_store_noncopy_test[1]_tests.cmake")
+else()
+  add_test(trie_store_noncopy_test_NOT_BUILT trie_store_noncopy_test_NOT_BUILT)
+endif()

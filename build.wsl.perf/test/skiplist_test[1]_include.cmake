@@ -1,0 +1,5 @@
+if(EXISTS "/mnt/d/my project/bustub/build.wsl.perf/test/skiplist_test[1]_tests.cmake")
+  include("/mnt/d/my project/bustub/build.wsl.perf/test/skiplist_test[1]_tests.cmake")
+else()
+  add_test(skiplist_test_NOT_BUILT skiplist_test_NOT_BUILT)
+endif()

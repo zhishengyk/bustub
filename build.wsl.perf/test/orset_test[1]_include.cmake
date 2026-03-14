@@ -1,0 +1,5 @@
+if(EXISTS "/mnt/d/my project/bustub/build.wsl.perf/test/orset_test[1]_tests.cmake")
+  include("/mnt/d/my project/bustub/build.wsl.perf/test/orset_test[1]_tests.cmake")
+else()
+  add_test(orset_test_NOT_BUILT orset_test_NOT_BUILT)
+endif()

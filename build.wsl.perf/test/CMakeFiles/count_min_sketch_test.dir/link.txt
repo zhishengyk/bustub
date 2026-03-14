@@ -1,0 +1,1 @@
+/usr/bin/c++ -O2 -g -DNDEBUG CMakeFiles/count_min_sketch_test.dir/primer/count_min_sketch_test.cpp.o CMakeFiles/count_min_sketch_test.dir/__/tools/backtrace.cpp.o -o count_min_sketch_test  ../lib/libbustub.a ../lib/libgtest.a ../lib/libgmock_main.a ../lib/libbustub_murmur3.a ../lib/libduckdb_pg_query.a ../lib/libfmt.a ../lib/libfort.a ../lib/libgmock.a ../lib/libgtest.a 

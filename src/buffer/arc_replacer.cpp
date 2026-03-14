@@ -13,12 +13,84 @@
 
 #include "buffer/arc_replacer.h"
 
+#include <atomic>
+#include <chrono>  // NOLINT(build/c++11)
+#include <cstdlib>
 #include <optional>
 #include <stdexcept>
 
 #include "common/config.h"
+#include "fmt/format.h"
 
 namespace bustub {
+
+namespace {
+
+using ProfileClock = std::chrono::steady_clock;
+
+auto ProfileEnabled() -> bool {
+  static const bool enabled = std::getenv("BUSTUB_PROFILE") != nullptr;
+  return enabled;
+}
+
+auto ProfileNowNs() -> uint64_t {
+  return static_cast<uint64_t>(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(ProfileClock::now().time_since_epoch()).count());
+}
+
+void UpdateMax(std::atomic<uint64_t> &target, uint64_t value) {
+  auto current = target.load(std::memory_order_relaxed);
+  while (current < value &&
+         !target.compare_exchange_weak(current, value, std::memory_order_relaxed, std::memory_order_relaxed)) {
+  }
+}
+
+struct ArcProfile {
+  std::atomic<uint64_t> evict_calls_{0};
+  std::atomic<uint64_t> evict_failures_{0};
+  std::atomic<uint64_t> evict_ns_total_{0};
+  std::atomic<uint64_t> evict_ns_max_{0};
+  std::atomic<uint64_t> record_access_calls_{0};
+  std::atomic<uint64_t> record_access_ns_total_{0};
+  std::atomic<uint64_t> record_access_ns_max_{0};
+
+  static auto AvgUs(uint64_t total_ns, uint64_t count) -> double {
+    if (count == 0) {
+      return 0.0;
+    }
+    return static_cast<double>(total_ns) / static_cast<double>(count) / 1000.0;
+  }
+
+  void Report() const {
+    if (!ProfileEnabled()) {
+      return;
+    }
+
+    const auto evict_calls = evict_calls_.load(std::memory_order_relaxed);
+    const auto record_calls = record_access_calls_.load(std::memory_order_relaxed);
+    fmt::println(stderr, "[profile][arc] evict_calls={} evict_failures={} avg_evict_us={:.2f} max_evict_us={:.2f}",
+                 evict_calls, evict_failures_.load(std::memory_order_relaxed),
+                 AvgUs(evict_ns_total_.load(std::memory_order_relaxed), evict_calls),
+                 static_cast<double>(evict_ns_max_.load(std::memory_order_relaxed)) / 1000.0);
+    fmt::println(stderr,
+                 "[profile][arc] record_access_calls={} avg_record_access_us={:.2f} max_record_access_us={:.2f}",
+                 record_calls, AvgUs(record_access_ns_total_.load(std::memory_order_relaxed), record_calls),
+                 static_cast<double>(record_access_ns_max_.load(std::memory_order_relaxed)) / 1000.0);
+  }
+};
+
+auto GetArcProfile() -> ArcProfile & {
+  static auto *profile = [] {
+    auto *prof = new ArcProfile();
+    if (ProfileEnabled()) {
+      std::atexit([] { GetArcProfile().Report(); });
+    }
+    return prof;
+  }();
+  return *profile;
+}
+
+}  // namespace
 
 /**
  *
@@ -46,8 +118,18 @@ ArcReplacer::ArcReplacer(size_t num_frames) : replacer_size_(num_frames) {}
  * @return 被驱逐帧的 frame id；若无法驱逐则返回 std::nullopt
  */
 auto ArcReplacer::Evict() -> std::optional<frame_id_t> {
+  const auto profile_enabled = ProfileEnabled();
+  const auto start_ns = profile_enabled ? ProfileNowNs() : 0;
   std::scoped_lock lock(latch_);
   if (curr_size_ == 0) {
+    if (profile_enabled) {
+      auto &profile = GetArcProfile();
+      profile.evict_calls_.fetch_add(1, std::memory_order_relaxed);
+      profile.evict_failures_.fetch_add(1, std::memory_order_relaxed);
+      const auto elapsed_ns = ProfileNowNs() - start_ns;
+      profile.evict_ns_total_.fetch_add(elapsed_ns, std::memory_order_relaxed);
+      UpdateMax(profile.evict_ns_max_, elapsed_ns);
+    }
     return std::nullopt;
   }
 
@@ -128,17 +210,52 @@ auto ArcReplacer::Evict() -> std::optional<frame_id_t> {
   const bool prefer_mfu = (mru_.size() < mru_target_size_);
   if (prefer_mfu) {
     if (auto victim = evict_from_mfu(); victim.has_value()) {
+      if (profile_enabled) {
+        auto &profile = GetArcProfile();
+        profile.evict_calls_.fetch_add(1, std::memory_order_relaxed);
+        const auto elapsed_ns = ProfileNowNs() - start_ns;
+        profile.evict_ns_total_.fetch_add(elapsed_ns, std::memory_order_relaxed);
+        UpdateMax(profile.evict_ns_max_, elapsed_ns);
+      }
       return victim;
     }
-    return evict_from_mru();
+    auto victim = evict_from_mru();
+    if (profile_enabled) {
+      auto &profile = GetArcProfile();
+      profile.evict_calls_.fetch_add(1, std::memory_order_relaxed);
+      if (!victim.has_value()) {
+        profile.evict_failures_.fetch_add(1, std::memory_order_relaxed);
+      }
+      const auto elapsed_ns = ProfileNowNs() - start_ns;
+      profile.evict_ns_total_.fetch_add(elapsed_ns, std::memory_order_relaxed);
+      UpdateMax(profile.evict_ns_max_, elapsed_ns);
+    }
+    return victim;
   }
 
   if (auto victim = evict_from_mru(); victim.has_value()) {
+    if (profile_enabled) {
+      auto &profile = GetArcProfile();
+      profile.evict_calls_.fetch_add(1, std::memory_order_relaxed);
+      const auto elapsed_ns = ProfileNowNs() - start_ns;
+      profile.evict_ns_total_.fetch_add(elapsed_ns, std::memory_order_relaxed);
+      UpdateMax(profile.evict_ns_max_, elapsed_ns);
+    }
     return victim;
   }
-  return evict_from_mfu();
+  auto victim = evict_from_mfu();
+  if (profile_enabled) {
+    auto &profile = GetArcProfile();
+    profile.evict_calls_.fetch_add(1, std::memory_order_relaxed);
+    if (!victim.has_value()) {
+      profile.evict_failures_.fetch_add(1, std::memory_order_relaxed);
+    }
+    const auto elapsed_ns = ProfileNowNs() - start_ns;
+    profile.evict_ns_total_.fetch_add(elapsed_ns, std::memory_order_relaxed);
+    UpdateMax(profile.evict_ns_max_, elapsed_ns);
+  }
+  return victim;
 }
-
 
 /**
  * TODO(P1): 补充实现
@@ -167,6 +284,18 @@ auto ArcReplacer::Evict() -> std::optional<frame_id_t> {
  * @param access_type 本次访问类型。该参数仅用于排行榜测试。
  */
 void ArcReplacer::RecordAccess(frame_id_t frame_id, page_id_t page_id, [[maybe_unused]] AccessType access_type) {
+  const auto profile_enabled = ProfileEnabled();
+  const auto start_ns = profile_enabled ? ProfileNowNs() : 0;
+  auto report_profile = [&]() {
+    if (profile_enabled) {
+      auto &profile = GetArcProfile();
+      profile.record_access_calls_.fetch_add(1, std::memory_order_relaxed);
+      const auto elapsed_ns = ProfileNowNs() - start_ns;
+      profile.record_access_ns_total_.fetch_add(elapsed_ns, std::memory_order_relaxed);
+      UpdateMax(profile.record_access_ns_max_, elapsed_ns);
+    }
+  };
+
   std::scoped_lock lock(latch_);
 
   if (frame_id < 0 || static_cast<size_t>(frame_id) > replacer_size_) {
@@ -187,6 +316,7 @@ void ArcReplacer::RecordAccess(frame_id_t frame_id, page_id_t page_id, [[maybe_u
     mfu_.push_front(frame_id);
     st->arc_status_ = ArcStatus::MFU;
     st->alive_pos_ = mfu_.begin();
+    report_profile();
     return;
   }
 
@@ -217,6 +347,7 @@ void ArcReplacer::RecordAccess(frame_id_t frame_id, page_id_t page_id, [[maybe_u
     mfu_.push_front(frame_id);
     st->alive_pos_ = mfu_.begin();
     alive_map_[frame_id] = st;
+    report_profile();
     return;
   }
 
@@ -263,6 +394,7 @@ void ArcReplacer::RecordAccess(frame_id_t frame_id, page_id_t page_id, [[maybe_u
   mru_.push_back(frame_id);
   st->alive_pos_ = std::prev(mru_.end());
   alive_map_[frame_id] = st;
+  report_profile();
 }
 
 /**
@@ -355,4 +487,4 @@ auto ArcReplacer::Size() -> size_t {
   return curr_size_;
 }
 
-}  // 命名空间 bustub
+}  // namespace bustub

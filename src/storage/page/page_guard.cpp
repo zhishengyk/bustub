@@ -69,7 +69,6 @@ ReadPageGuard::ReadPageGuard(ReadPageGuard &&that) noexcept {
   that.is_valid_ = false;
 }
 
-
 /**
  * @brief `ReadPageGuard` 的移动赋值运算符。
  *
@@ -164,6 +163,7 @@ void ReadPageGuard::Drop() {
     return;
   }
 
+  frame_->rwlatch_.unlock_shared();
   {
     std::scoped_lock lock(*bpm_latch_);
     auto new_pin_count = frame_->pin_count_.fetch_sub(1) - 1;
@@ -171,7 +171,6 @@ void ReadPageGuard::Drop() {
       replacer_->SetEvictable(frame_->frame_id_, true);
     }
   }
-  frame_->rwlatch_.unlock_shared();
   is_valid_ = false;
   page_id_ = INVALID_PAGE_ID;
   frame_.reset();
@@ -327,7 +326,6 @@ void WritePageGuard::Flush() {
   frame_->is_dirty_ = false;
 }
 
-
 /**
  * @brief 手动释放一个有效 `WritePageGuard` 持有的资源。如果该 guard 无效，则什么都不做。
  *
@@ -344,6 +342,7 @@ void WritePageGuard::Drop() {
     return;
   }
 
+  frame_->rwlatch_.unlock();
   {
     std::scoped_lock lock(*bpm_latch_);
     auto new_pin_count = frame_->pin_count_.fetch_sub(1) - 1;
@@ -351,7 +350,6 @@ void WritePageGuard::Drop() {
       replacer_->SetEvictable(frame_->frame_id_, true);
     }
   }
-  frame_->rwlatch_.unlock();
   is_valid_ = false;
   page_id_ = INVALID_PAGE_ID;
   frame_.reset();

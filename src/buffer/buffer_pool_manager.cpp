@@ -11,11 +11,126 @@
 //===----------------------------------------------------------------------===//
 
 #include "buffer/buffer_pool_manager.h"
+
+#include <atomic>
+#include <chrono>  // NOLINT(build/c++11)
+#include <cstdlib>
+
 #include "buffer/arc_replacer.h"
 #include "common/config.h"
 #include "common/macros.h"
 
 namespace bustub {
+
+namespace {
+
+using ProfileClock = std::chrono::steady_clock;
+
+auto ProfileEnabled() -> bool {
+  static const bool enabled = std::getenv("BUSTUB_PROFILE") != nullptr;
+  return enabled;
+}
+
+auto ProfileNowNs() -> uint64_t {
+  return static_cast<uint64_t>(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(ProfileClock::now().time_since_epoch()).count());
+}
+
+void UpdateMax(std::atomic<uint64_t> &target, uint64_t value) {
+  auto current = target.load(std::memory_order_relaxed);
+  while (current < value &&
+         !target.compare_exchange_weak(current, value, std::memory_order_relaxed, std::memory_order_relaxed)) {
+  }
+}
+
+struct BpmProfile {
+  std::atomic<uint64_t> read_hits_{0};
+  std::atomic<uint64_t> read_misses_{0};
+  std::atomic<uint64_t> write_hits_{0};
+  std::atomic<uint64_t> write_misses_{0};
+  std::atomic<uint64_t> no_frame_failures_{0};
+  std::atomic<uint64_t> evictions_{0};
+  std::atomic<uint64_t> dirty_writebacks_{0};
+  std::atomic<uint64_t> read_ios_{0};
+
+  std::atomic<uint64_t> read_hit_ns_total_{0};
+  std::atomic<uint64_t> read_miss_ns_total_{0};
+  std::atomic<uint64_t> write_hit_ns_total_{0};
+  std::atomic<uint64_t> write_miss_ns_total_{0};
+  std::atomic<uint64_t> bpm_latch_hold_ns_total_{0};
+  std::atomic<uint64_t> bpm_latch_hold_ns_max_{0};
+  std::atomic<uint64_t> evict_ns_total_{0};
+  std::atomic<uint64_t> evict_ns_max_{0};
+  std::atomic<uint64_t> writeback_wait_ns_total_{0};
+  std::atomic<uint64_t> writeback_wait_ns_max_{0};
+  std::atomic<uint64_t> readin_wait_ns_total_{0};
+  std::atomic<uint64_t> readin_wait_ns_max_{0};
+  std::atomic<uint64_t> read_miss_ns_max_{0};
+  std::atomic<uint64_t> write_miss_ns_max_{0};
+
+  static auto AvgUs(uint64_t total_ns, uint64_t count) -> double {
+    if (count == 0) {
+      return 0.0;
+    }
+    return static_cast<double>(total_ns) / static_cast<double>(count) / 1000.0;
+  }
+
+  void Report() const {
+    if (!ProfileEnabled()) {
+      return;
+    }
+
+    const auto read_hits = read_hits_.load(std::memory_order_relaxed);
+    const auto read_misses = read_misses_.load(std::memory_order_relaxed);
+    const auto write_hits = write_hits_.load(std::memory_order_relaxed);
+    const auto write_misses = write_misses_.load(std::memory_order_relaxed);
+    const auto total_ops = read_hits + read_misses + write_hits + write_misses;
+
+    fmt::println(stderr, "[profile][bpm] read_hits={} read_misses={} write_hits={} write_misses={}", read_hits,
+                 read_misses, write_hits, write_misses);
+    fmt::println(stderr, "[profile][bpm] evictions={} dirty_writebacks={} read_ios={} no_frame_failures={}",
+                 evictions_.load(std::memory_order_relaxed), dirty_writebacks_.load(std::memory_order_relaxed),
+                 read_ios_.load(std::memory_order_relaxed), no_frame_failures_.load(std::memory_order_relaxed));
+    fmt::println(stderr, "[profile][bpm] avg_read_hit_us={:.2f} avg_read_miss_us={:.2f}",  //
+                 AvgUs(read_hit_ns_total_.load(std::memory_order_relaxed), read_hits),
+                 AvgUs(read_miss_ns_total_.load(std::memory_order_relaxed), read_misses));
+    fmt::println(stderr, "[profile][bpm] avg_write_hit_us={:.2f} avg_write_miss_us={:.2f}",  //
+                 AvgUs(write_hit_ns_total_.load(std::memory_order_relaxed), write_hits),
+                 AvgUs(write_miss_ns_total_.load(std::memory_order_relaxed), write_misses));
+    fmt::println(stderr, "[profile][bpm] avg_bpm_latch_hold_us={:.2f} max_bpm_latch_hold_us={:.2f}",
+                 AvgUs(bpm_latch_hold_ns_total_.load(std::memory_order_relaxed), total_ops),
+                 static_cast<double>(bpm_latch_hold_ns_max_.load(std::memory_order_relaxed)) / 1000.0);
+
+    const auto evictions = evictions_.load(std::memory_order_relaxed);
+    const auto dirty_writebacks = dirty_writebacks_.load(std::memory_order_relaxed);
+    const auto read_ios = read_ios_.load(std::memory_order_relaxed);
+    fmt::println(stderr, "[profile][bpm] avg_evict_us={:.2f} max_evict_us={:.2f}",
+                 AvgUs(evict_ns_total_.load(std::memory_order_relaxed), evictions),
+                 static_cast<double>(evict_ns_max_.load(std::memory_order_relaxed)) / 1000.0);
+    fmt::println(stderr, "[profile][bpm] avg_writeback_wait_us={:.2f} max_writeback_wait_us={:.2f}",
+                 AvgUs(writeback_wait_ns_total_.load(std::memory_order_relaxed), dirty_writebacks),
+                 static_cast<double>(writeback_wait_ns_max_.load(std::memory_order_relaxed)) / 1000.0);
+    fmt::println(stderr, "[profile][bpm] avg_readin_wait_us={:.2f} max_readin_wait_us={:.2f}",
+                 AvgUs(readin_wait_ns_total_.load(std::memory_order_relaxed), read_ios),
+                 static_cast<double>(readin_wait_ns_max_.load(std::memory_order_relaxed)) / 1000.0);
+    fmt::println(stderr, "[profile][bpm] max_read_miss_us={:.2f} max_write_miss_us={:.2f}",
+                 static_cast<double>(read_miss_ns_max_.load(std::memory_order_relaxed)) / 1000.0,
+                 static_cast<double>(write_miss_ns_max_.load(std::memory_order_relaxed)) / 1000.0);
+  }
+};
+
+auto GetBpmProfile() -> BpmProfile & {
+  static auto *profile = [] {
+    auto *prof = new BpmProfile();
+    if (ProfileEnabled()) {
+      std::atexit([] { GetBpmProfile().Report(); });
+    }
+    return prof;
+  }();
+  return *profile;
+}
+
+}  // namespace
 
 /**
  * @brief `FrameHeader` 的构造函数，会将所有字段初始化为默认值。
@@ -117,9 +232,7 @@ auto BufferPoolManager::Size() const -> size_t { return num_frames_; }
  *
  * @return 新分配页面的 page ID。
  */
-auto BufferPoolManager::NewPage() -> page_id_t { 
-  return next_page_id_.fetch_add(1);
-}
+auto BufferPoolManager::NewPage() -> page_id_t { return next_page_id_.fetch_add(1); }
 
 /**
  * @brief 从数据库中删除一个页面（包括磁盘和内存中的副本）。
@@ -140,7 +253,8 @@ auto BufferPoolManager::NewPage() -> page_id_t {
  * @return 若页面存在但无法删除则返回 `false`；若页面不存在或删除成功则返回 `true`。
  */
 auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool {
-  std::scoped_lock lock(*bpm_latch_);
+  std::unique_lock<std::mutex> lock(*bpm_latch_);
+  bpm_cv_.wait(lock, [&] { return pending_pages_.count(page_id) == 0; });
 
   auto it = page_table_.find(page_id);
   if (it == page_table_.end()) {
@@ -198,29 +312,66 @@ auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool {
  * 则返回 `std::nullopt`；否则返回 `WritePageGuard`，保证对页面数据的独占可变访问。
  */
 auto BufferPoolManager::CheckedWritePage(page_id_t page_id, AccessType access_type) -> std::optional<WritePageGuard> {
+  const auto profile_enabled = ProfileEnabled();
+  const auto op_start_ns = profile_enabled ? ProfileNowNs() : 0;
   std::shared_ptr<FrameHeader> frame;
+  std::optional<page_id_t> dirty_writeback_page_id;
+  frame_id_t frame_id = -1;
+  uint64_t bpm_latch_hold_ns = 0;
+  uint64_t evict_ns = 0;
+  uint64_t writeback_wait_ns = 0;
+  uint64_t readin_wait_ns = 0;
+  bool cache_hit = false;
+  bool failed_no_frame = false;
+  bool did_evict = false;
+  bool did_dirty_writeback = false;
+  bool did_read_io = false;
 
   {
-    std::scoped_lock lock(*bpm_latch_);
-    auto it = page_table_.find(page_id);
-    if (it != page_table_.end()) {
-      const auto frame_id = it->second;
-      frame = frames_[frame_id];
-      frame->pin_count_.fetch_add(1);
-      replacer_->SetEvictable(frame_id, false);
-      replacer_->RecordAccess(frame_id, page_id, access_type);
-    } else {
-      frame_id_t frame_id;
+    std::unique_lock<std::mutex> lock(*bpm_latch_);
+    while (true) {
+      const auto lock_acquired_ns = profile_enabled ? ProfileNowNs() : 0;
+      auto it = page_table_.find(page_id);
+      if (it != page_table_.end()) {
+        cache_hit = true;
+        frame_id = it->second;
+        frame = frames_[frame_id];
+        frame->pin_count_.fetch_add(1);
+        replacer_->SetEvictable(frame_id, false);
+        replacer_->RecordAccess(frame_id, page_id, access_type);
+        if (profile_enabled) {
+          bpm_latch_hold_ns += ProfileNowNs() - lock_acquired_ns;
+        }
+        break;
+      }
+
+      if (pending_pages_.count(page_id) != 0) {
+        if (profile_enabled) {
+          bpm_latch_hold_ns += ProfileNowNs() - lock_acquired_ns;
+        }
+        bpm_cv_.wait(lock, [&] { return pending_pages_.count(page_id) == 0; });
+        continue;
+      }
 
       if (!free_frames_.empty()) {
         frame_id = free_frames_.front();
         free_frames_.pop_front();
         frame = frames_[frame_id];
       } else {
+        const auto evict_start_ns = profile_enabled ? ProfileNowNs() : 0;
         auto victim_opt = replacer_->Evict();
-        if (!victim_opt.has_value()) {
-          return std::nullopt;
+        if (profile_enabled) {
+          evict_ns += ProfileNowNs() - evict_start_ns;
         }
+        if (!victim_opt.has_value()) {
+          failed_no_frame = true;
+          if (profile_enabled) {
+            bpm_latch_hold_ns += ProfileNowNs() - lock_acquired_ns;
+          }
+          break;
+        }
+
+        did_evict = true;
         frame_id = victim_opt.value();
         frame = frames_[frame_id];
 
@@ -229,31 +380,61 @@ auto BufferPoolManager::CheckedWritePage(page_id_t page_id, AccessType access_ty
           page_table_.erase(old_page_id);
 
           if (frame->is_dirty_) {
-            auto promise = disk_scheduler_->CreatePromise();
-            auto future = promise.get_future();
-
-            DiskRequest write_req{true, frame->GetDataMut(), old_page_id, std::move(promise)};
-            std::vector<DiskRequest> requests;
-            requests.push_back(std::move(write_req));
-
-            disk_scheduler_->Schedule(requests);
-            future.get();
+            did_dirty_writeback = true;
+            dirty_writeback_page_id = old_page_id;
+            pending_pages_.insert(old_page_id);
           }
         }
       }
 
-      frame->Reset();
+      pending_pages_.insert(page_id);
+      if (profile_enabled) {
+        bpm_latch_hold_ns += ProfileNowNs() - lock_acquired_ns;
+      }
+      break;
+    }
+  }
 
+  if (!cache_hit && !failed_no_frame) {
+    if (dirty_writeback_page_id.has_value()) {
       auto promise = disk_scheduler_->CreatePromise();
       auto future = promise.get_future();
 
-      DiskRequest read_req{false, frame->GetDataMut(), page_id, std::move(promise)};
+      DiskRequest write_req{true, frame->GetDataMut(), dirty_writeback_page_id.value(), std::move(promise)};
       std::vector<DiskRequest> requests;
-      requests.push_back(std::move(read_req));
+      requests.push_back(std::move(write_req));
 
+      const auto io_wait_start_ns = profile_enabled ? ProfileNowNs() : 0;
       disk_scheduler_->Schedule(requests);
       future.get();
+      if (profile_enabled) {
+        writeback_wait_ns += ProfileNowNs() - io_wait_start_ns;
+      }
+    }
 
+    frame->Reset();
+
+    auto promise = disk_scheduler_->CreatePromise();
+    auto future = promise.get_future();
+
+    DiskRequest read_req{false, frame->GetDataMut(), page_id, std::move(promise)};
+    std::vector<DiskRequest> requests;
+    requests.push_back(std::move(read_req));
+
+    did_read_io = true;
+    const auto io_wait_start_ns = profile_enabled ? ProfileNowNs() : 0;
+    disk_scheduler_->Schedule(requests);
+    future.get();
+    if (profile_enabled) {
+      readin_wait_ns += ProfileNowNs() - io_wait_start_ns;
+    }
+
+    {
+      std::unique_lock<std::mutex> lock(*bpm_latch_);
+      const auto lock_acquired_ns = profile_enabled ? ProfileNowNs() : 0;
+      if (dirty_writeback_page_id.has_value()) {
+        pending_pages_.erase(dirty_writeback_page_id.value());
+      }
       frame->page_id_ = page_id;
       frame->pin_count_.store(1);
       frame->is_dirty_ = false;
@@ -261,7 +442,49 @@ auto BufferPoolManager::CheckedWritePage(page_id_t page_id, AccessType access_ty
       page_table_[page_id] = frame_id;
       replacer_->RecordAccess(frame_id, page_id, access_type);
       replacer_->SetEvictable(frame_id, false);
+      pending_pages_.erase(page_id);
+      if (profile_enabled) {
+        bpm_latch_hold_ns += ProfileNowNs() - lock_acquired_ns;
+      }
     }
+    bpm_cv_.notify_all();
+  }
+
+  if (profile_enabled) {
+    auto &profile = GetBpmProfile();
+    const auto total_ns = ProfileNowNs() - op_start_ns;
+    if (cache_hit) {
+      profile.write_hits_.fetch_add(1, std::memory_order_relaxed);
+      profile.write_hit_ns_total_.fetch_add(total_ns, std::memory_order_relaxed);
+    } else {
+      profile.write_misses_.fetch_add(1, std::memory_order_relaxed);
+      profile.write_miss_ns_total_.fetch_add(total_ns, std::memory_order_relaxed);
+      UpdateMax(profile.write_miss_ns_max_, total_ns);
+    }
+    if (failed_no_frame) {
+      profile.no_frame_failures_.fetch_add(1, std::memory_order_relaxed);
+    }
+    if (did_evict) {
+      profile.evictions_.fetch_add(1, std::memory_order_relaxed);
+      profile.evict_ns_total_.fetch_add(evict_ns, std::memory_order_relaxed);
+      UpdateMax(profile.evict_ns_max_, evict_ns);
+    }
+    if (did_dirty_writeback) {
+      profile.dirty_writebacks_.fetch_add(1, std::memory_order_relaxed);
+      profile.writeback_wait_ns_total_.fetch_add(writeback_wait_ns, std::memory_order_relaxed);
+      UpdateMax(profile.writeback_wait_ns_max_, writeback_wait_ns);
+    }
+    if (did_read_io) {
+      profile.read_ios_.fetch_add(1, std::memory_order_relaxed);
+      profile.readin_wait_ns_total_.fetch_add(readin_wait_ns, std::memory_order_relaxed);
+      UpdateMax(profile.readin_wait_ns_max_, readin_wait_ns);
+    }
+    profile.bpm_latch_hold_ns_total_.fetch_add(bpm_latch_hold_ns, std::memory_order_relaxed);
+    UpdateMax(profile.bpm_latch_hold_ns_max_, bpm_latch_hold_ns);
+  }
+
+  if (failed_no_frame) {
+    return std::nullopt;
   }
 
   return WritePageGuard(page_id, frame, replacer_, bpm_latch_, disk_scheduler_);
@@ -290,31 +513,67 @@ auto BufferPoolManager::CheckedWritePage(page_id_t page_id, AccessType access_ty
  * @return std::optional<ReadPageGuard> 可选的闩锁保护：如果没有空闲帧（内存不足）
  * 则返回 `std::nullopt`；否则返回 `ReadPageGuard`，保证对页面数据的共享只读访问。
  */
-auto BufferPoolManager::CheckedReadPage(page_id_t page_id, AccessType access_type)
--> std::optional<ReadPageGuard> {
+auto BufferPoolManager::CheckedReadPage(page_id_t page_id, AccessType access_type) -> std::optional<ReadPageGuard> {
+  const auto profile_enabled = ProfileEnabled();
+  const auto op_start_ns = profile_enabled ? ProfileNowNs() : 0;
   std::shared_ptr<FrameHeader> frame;
+  std::optional<page_id_t> dirty_writeback_page_id;
+  frame_id_t frame_id = -1;
+  uint64_t bpm_latch_hold_ns = 0;
+  uint64_t evict_ns = 0;
+  uint64_t writeback_wait_ns = 0;
+  uint64_t readin_wait_ns = 0;
+  bool cache_hit = false;
+  bool failed_no_frame = false;
+  bool did_evict = false;
+  bool did_dirty_writeback = false;
+  bool did_read_io = false;
 
   {
-    std::scoped_lock lock(*bpm_latch_);
-    auto it = page_table_.find(page_id);
-    if (it != page_table_.end()) {
-      const auto frame_id = it->second;
-      frame = frames_[frame_id];
-      frame->pin_count_.fetch_add(1);
-      replacer_->SetEvictable(frame_id, false);
-      replacer_->RecordAccess(frame_id, page_id, access_type);
-    } else {
-      frame_id_t frame_id;
+    std::unique_lock<std::mutex> lock(*bpm_latch_);
+    while (true) {
+      const auto lock_acquired_ns = profile_enabled ? ProfileNowNs() : 0;
+      auto it = page_table_.find(page_id);
+      if (it != page_table_.end()) {
+        cache_hit = true;
+        frame_id = it->second;
+        frame = frames_[frame_id];
+        frame->pin_count_.fetch_add(1);
+        replacer_->SetEvictable(frame_id, false);
+        replacer_->RecordAccess(frame_id, page_id, access_type);
+        if (profile_enabled) {
+          bpm_latch_hold_ns += ProfileNowNs() - lock_acquired_ns;
+        }
+        break;
+      }
+
+      if (pending_pages_.count(page_id) != 0) {
+        if (profile_enabled) {
+          bpm_latch_hold_ns += ProfileNowNs() - lock_acquired_ns;
+        }
+        bpm_cv_.wait(lock, [&] { return pending_pages_.count(page_id) == 0; });
+        continue;
+      }
 
       if (!free_frames_.empty()) {
         frame_id = free_frames_.front();
         free_frames_.pop_front();
         frame = frames_[frame_id];
       } else {
+        const auto evict_start_ns = profile_enabled ? ProfileNowNs() : 0;
         auto victim_opt = replacer_->Evict();
-        if (!victim_opt.has_value()) {
-          return std::nullopt;
+        if (profile_enabled) {
+          evict_ns += ProfileNowNs() - evict_start_ns;
         }
+        if (!victim_opt.has_value()) {
+          failed_no_frame = true;
+          if (profile_enabled) {
+            bpm_latch_hold_ns += ProfileNowNs() - lock_acquired_ns;
+          }
+          break;
+        }
+
+        did_evict = true;
         frame_id = victim_opt.value();
         frame = frames_[frame_id];
 
@@ -323,31 +582,61 @@ auto BufferPoolManager::CheckedReadPage(page_id_t page_id, AccessType access_typ
           page_table_.erase(old_page_id);
 
           if (frame->is_dirty_) {
-            auto promise = disk_scheduler_->CreatePromise();
-            auto future = promise.get_future();
-
-            DiskRequest write_req{true, frame->GetDataMut(), old_page_id, std::move(promise)};
-            std::vector<DiskRequest> requests;
-            requests.push_back(std::move(write_req));
-
-            disk_scheduler_->Schedule(requests);
-            future.get();
+            did_dirty_writeback = true;
+            dirty_writeback_page_id = old_page_id;
+            pending_pages_.insert(old_page_id);
           }
         }
       }
 
-      frame->Reset();
+      pending_pages_.insert(page_id);
+      if (profile_enabled) {
+        bpm_latch_hold_ns += ProfileNowNs() - lock_acquired_ns;
+      }
+      break;
+    }
+  }
 
+  if (!cache_hit && !failed_no_frame) {
+    if (dirty_writeback_page_id.has_value()) {
       auto promise = disk_scheduler_->CreatePromise();
       auto future = promise.get_future();
 
-      DiskRequest read_req{false, frame->GetDataMut(), page_id, std::move(promise)};
+      DiskRequest write_req{true, frame->GetDataMut(), dirty_writeback_page_id.value(), std::move(promise)};
       std::vector<DiskRequest> requests;
-      requests.push_back(std::move(read_req));
+      requests.push_back(std::move(write_req));
 
+      const auto io_wait_start_ns = profile_enabled ? ProfileNowNs() : 0;
       disk_scheduler_->Schedule(requests);
       future.get();
+      if (profile_enabled) {
+        writeback_wait_ns += ProfileNowNs() - io_wait_start_ns;
+      }
+    }
 
+    frame->Reset();
+
+    auto promise = disk_scheduler_->CreatePromise();
+    auto future = promise.get_future();
+
+    DiskRequest read_req{false, frame->GetDataMut(), page_id, std::move(promise)};
+    std::vector<DiskRequest> requests;
+    requests.push_back(std::move(read_req));
+
+    did_read_io = true;
+    const auto io_wait_start_ns = profile_enabled ? ProfileNowNs() : 0;
+    disk_scheduler_->Schedule(requests);
+    future.get();
+    if (profile_enabled) {
+      readin_wait_ns += ProfileNowNs() - io_wait_start_ns;
+    }
+
+    {
+      std::unique_lock<std::mutex> lock(*bpm_latch_);
+      const auto lock_acquired_ns = profile_enabled ? ProfileNowNs() : 0;
+      if (dirty_writeback_page_id.has_value()) {
+        pending_pages_.erase(dirty_writeback_page_id.value());
+      }
       frame->page_id_ = page_id;
       frame->pin_count_.store(1);
       frame->is_dirty_ = false;
@@ -355,7 +644,49 @@ auto BufferPoolManager::CheckedReadPage(page_id_t page_id, AccessType access_typ
       page_table_[page_id] = frame_id;
       replacer_->RecordAccess(frame_id, page_id, access_type);
       replacer_->SetEvictable(frame_id, false);
+      pending_pages_.erase(page_id);
+      if (profile_enabled) {
+        bpm_latch_hold_ns += ProfileNowNs() - lock_acquired_ns;
+      }
     }
+    bpm_cv_.notify_all();
+  }
+
+  if (profile_enabled) {
+    auto &profile = GetBpmProfile();
+    const auto total_ns = ProfileNowNs() - op_start_ns;
+    if (cache_hit) {
+      profile.read_hits_.fetch_add(1, std::memory_order_relaxed);
+      profile.read_hit_ns_total_.fetch_add(total_ns, std::memory_order_relaxed);
+    } else {
+      profile.read_misses_.fetch_add(1, std::memory_order_relaxed);
+      profile.read_miss_ns_total_.fetch_add(total_ns, std::memory_order_relaxed);
+      UpdateMax(profile.read_miss_ns_max_, total_ns);
+    }
+    if (failed_no_frame) {
+      profile.no_frame_failures_.fetch_add(1, std::memory_order_relaxed);
+    }
+    if (did_evict) {
+      profile.evictions_.fetch_add(1, std::memory_order_relaxed);
+      profile.evict_ns_total_.fetch_add(evict_ns, std::memory_order_relaxed);
+      UpdateMax(profile.evict_ns_max_, evict_ns);
+    }
+    if (did_dirty_writeback) {
+      profile.dirty_writebacks_.fetch_add(1, std::memory_order_relaxed);
+      profile.writeback_wait_ns_total_.fetch_add(writeback_wait_ns, std::memory_order_relaxed);
+      UpdateMax(profile.writeback_wait_ns_max_, writeback_wait_ns);
+    }
+    if (did_read_io) {
+      profile.read_ios_.fetch_add(1, std::memory_order_relaxed);
+      profile.readin_wait_ns_total_.fetch_add(readin_wait_ns, std::memory_order_relaxed);
+      UpdateMax(profile.readin_wait_ns_max_, readin_wait_ns);
+    }
+    profile.bpm_latch_hold_ns_total_.fetch_add(bpm_latch_hold_ns, std::memory_order_relaxed);
+    UpdateMax(profile.bpm_latch_hold_ns_max_, bpm_latch_hold_ns);
+  }
+
+  if (failed_no_frame) {
+    return std::nullopt;
   }
 
   return ReadPageGuard(page_id, frame, replacer_, bpm_latch_, disk_scheduler_);
@@ -431,7 +762,8 @@ auto BufferPoolManager::ReadPage(page_id_t page_id, AccessType access_type) -> R
  * @return 若页表中找不到该页面则返回 `false`；否则返回 `true`。
  */
 auto BufferPoolManager::FlushPageUnsafe(page_id_t page_id) -> bool {
-  std::scoped_lock lock(*bpm_latch_);
+  std::unique_lock<std::mutex> lock(*bpm_latch_);
+  bpm_cv_.wait(lock, [&] { return pending_pages_.count(page_id) == 0; });
 
   auto it = page_table_.find(page_id);
   if (it == page_table_.end()) {
@@ -480,7 +812,8 @@ auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
   frame_id_t frame_id;
 
   {
-    std::scoped_lock lock(*bpm_latch_);
+    std::unique_lock<std::mutex> lock(*bpm_latch_);
+    bpm_cv_.wait(lock, [&] { return pending_pages_.count(page_id) == 0; });
     auto it = page_table_.find(page_id);
     if (it == page_table_.end()) {
       return false;
@@ -585,13 +918,14 @@ void BufferPoolManager::FlushAllPages() {
  * @return std::optional<size_t> 若页面存在则返回 pin count；否则返回 `std::nullopt`。
  */
 auto BufferPoolManager::GetPinCount(page_id_t page_id) -> std::optional<size_t> {
-  std::scoped_lock lock(*bpm_latch_);
+  std::unique_lock<std::mutex> lock(*bpm_latch_);
+  bpm_cv_.wait(lock, [&] { return pending_pages_.count(page_id) == 0; });
   auto it = page_table_.find(page_id);
-  if(it == page_table_.end()){
+  if (it == page_table_.end()) {
     return std::nullopt;
   }
   auto frame_id = it->second;
   return frames_[frame_id]->pin_count_.load();
 }
 
-}  // 命名空间 bustub
+}  // namespace bustub

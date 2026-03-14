@@ -1,0 +1,5 @@
+if(EXISTS "/mnt/d/my project/bustub/build.wsl.perf/test/count_min_sketch_test[1]_tests.cmake")
+  include("/mnt/d/my project/bustub/build.wsl.perf/test/count_min_sketch_test[1]_tests.cmake")
+else()
+  add_test(count_min_sketch_test_NOT_BUILT count_min_sketch_test_NOT_BUILT)
+endif()

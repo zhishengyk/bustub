@@ -1,0 +1,5 @@
+if(EXISTS "/mnt/d/my project/bustub/build.wsl.perf/test/txn_scan_test[1]_tests.cmake")
+  include("/mnt/d/my project/bustub/build.wsl.perf/test/txn_scan_test[1]_tests.cmake")
+else()
+  add_test(txn_scan_test_NOT_BUILT txn_scan_test_NOT_BUILT)
+endif()
