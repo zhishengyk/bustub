@@ -27,18 +27,56 @@ FULL_INDEX_TEMPLATE_ARGUMENTS
 INDEXITERATOR_TYPE::IndexIterator() = default;
 
 FULL_INDEX_TEMPLATE_ARGUMENTS
-INDEXITERATOR_TYPE::~IndexIterator() = default;  // NOLINT
-
-FULL_INDEX_TEMPLATE_ARGUMENTS
-auto INDEXITERATOR_TYPE::IsEnd() -> bool { UNIMPLEMENTED("TODO(P2): Add implementation."); }
-
-FULL_INDEX_TEMPLATE_ARGUMENTS
-auto INDEXITERATOR_TYPE::operator*() -> std::pair<const KeyType &, const ValueType &> {
-  UNIMPLEMENTED("TODO(P2): Add implementation.");
+INDEXITERATOR_TYPE::IndexIterator(std::shared_ptr<TracedBufferPoolManager> bpm, std::optional<ReadPageGuard> guard,
+                                  int index)
+    : bpm_(std::move(bpm)), guard_(std::move(guard)), index_(index) {
+  AdvanceToValid();
 }
 
 FULL_INDEX_TEMPLATE_ARGUMENTS
-auto INDEXITERATOR_TYPE::operator++() -> INDEXITERATOR_TYPE & { UNIMPLEMENTED("TODO(P2): Add implementation."); }
+INDEXITERATOR_TYPE::~IndexIterator() = default;  // NOLINT
+
+FULL_INDEX_TEMPLATE_ARGUMENTS
+auto INDEXITERATOR_TYPE::IsEnd() -> bool { return !guard_.has_value(); }
+
+FULL_INDEX_TEMPLATE_ARGUMENTS
+auto INDEXITERATOR_TYPE::operator*() -> std::pair<const KeyType &, const ValueType &> {
+  BUSTUB_ASSERT(guard_.has_value(), "cannot dereference end iterator");
+  auto leaf = guard_->template As<B_PLUS_TREE_LEAF_PAGE_TYPE>();
+  BUSTUB_ASSERT(index_ >= 0 && index_ < leaf->GetSize(), "iterator index out of range");
+  return {leaf->KeyAtRef(index_), leaf->ValueAtRef(index_)};
+}
+
+FULL_INDEX_TEMPLATE_ARGUMENTS
+auto INDEXITERATOR_TYPE::operator++() -> INDEXITERATOR_TYPE & {
+  BUSTUB_ASSERT(guard_.has_value(), "cannot increment end iterator");
+  index_++;
+  AdvanceToValid();
+  return *this;
+}
+
+FULL_INDEX_TEMPLATE_ARGUMENTS
+void INDEXITERATOR_TYPE::AdvanceToValid() {
+  while (guard_.has_value()) {
+    auto leaf = guard_->template As<B_PLUS_TREE_LEAF_PAGE_TYPE>();
+    while (index_ < leaf->GetSize() && leaf->IsTombstoned(index_)) {
+      index_++;
+    }
+    if (index_ < leaf->GetSize()) {
+      return;
+    }
+
+    auto next_page_id = leaf->GetNextPageId();
+    if (next_page_id == INVALID_PAGE_ID) {
+      guard_ = std::nullopt;
+      index_ = 0;
+      return;
+    }
+
+    guard_ = bpm_->ReadPage(next_page_id);
+    index_ = 0;
+  }
+}
 
 template class IndexIterator<GenericKey<4>, RID, GenericComparator<4>>;
 

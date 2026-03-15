@@ -88,6 +88,14 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const -> ValueType {
   return page_id_array_[index];
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetValueAt(int index, const ValueType &value) {
+  if (index < 0 || index >= GetSize()) {
+    throw Exception("Invalid index for SetValueAt in Internal Page");
+  }
+  page_id_array_[index] = value;
+}
+
 // Internal Node 的 ValueType 应为 page_id_t。
 template class BPlusTreeInternalPage<GenericKey<4>, page_id_t, GenericComparator<4>>;
 template class BPlusTreeInternalPage<GenericKey<8>, page_id_t, GenericComparator<8>>;

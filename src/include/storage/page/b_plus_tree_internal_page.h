@@ -62,6 +62,8 @@ class BPlusTreeInternalPage : public BPlusTreePage {
 
   auto ValueAt(int index) const -> ValueType;
 
+  void SetValueAt(int index, const ValueType &value);
+
   /**
    * @brief 仅用于测试，返回当前 Internal Page 中所有键组成的字符串。
    * 格式为 "(key1,key2,key3,...)"

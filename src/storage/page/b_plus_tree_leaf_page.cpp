@@ -82,6 +82,71 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::ValueAt(int index) const -> ValueType {
   return rid_array_[index];
 }
 
+FULL_INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::KeyAtRef(int index) const -> const KeyType & {
+  if (index < 0 || index >= GetSize()) {
+    throw Exception("Invalid index for KeyAtRef in Leaf Page");
+  }
+  return key_array_[index];
+}
+
+FULL_INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::ValueAtRef(int index) const -> const ValueType & {
+  if (index < 0 || index >= GetSize()) {
+    throw Exception("Invalid index for ValueAtRef in Leaf Page");
+  }
+  return rid_array_[index];
+}
+
+FULL_INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::GetTombstoneCount() const -> size_t { return num_tombstones_; }
+
+FULL_INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::TombstoneAt(size_t index) const -> size_t {
+  if (index >= num_tombstones_) {
+    throw Exception("Invalid index for TombstoneAt in Leaf Page");
+  }
+  return tombstones_[index];
+}
+
+FULL_INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::IsTombstoned(int index) const -> bool {
+  if (index < 0 || index >= GetSize()) {
+    throw Exception("Invalid index for IsTombstoned in Leaf Page");
+  }
+  for (size_t i = 0; i < num_tombstones_; i++) {
+    if (static_cast<int>(tombstones_[i]) == index) {
+      return true;
+    }
+  }
+  return false;
+}
+
+FULL_INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::SetTombstoneCount(size_t count) {
+  if (count > LEAF_PAGE_TOMB_CNT) {
+    throw Exception("Invalid tombstone count for Leaf Page");
+  }
+  num_tombstones_ = count;
+}
+
+FULL_INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::SetTombstoneAt(size_t index, size_t value) {
+  if (index >= LEAF_PAGE_TOMB_CNT) {
+    throw Exception("Invalid index for SetTombstoneAt in Leaf Page");
+  }
+  tombstones_[index] = value;
+}
+
+FULL_INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::SetEntryAt(int index, const KeyType &key, const ValueType &value) {
+  if (index < 0 || index >= GetSize()) {
+    throw Exception("Invalid index for SetEntryAt in Leaf Page");
+  }
+  key_array_[index] = key;
+  rid_array_[index] = value;
+}
+
 template class BPlusTreeLeafPage<GenericKey<4>, RID, GenericComparator<4>>;
 
 template class BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>>;

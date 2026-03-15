@@ -15,6 +15,7 @@
  * For range scan of b+ tree
  */
 #pragma once
+#include <optional>
 #include <utility>
 #include "buffer/traced_buffer_pool_manager.h"
 #include "common/config.h"
@@ -31,6 +32,7 @@ class IndexIterator {
  public:
   // you may define your own constructor based on your member variables
   IndexIterator();
+  IndexIterator(std::shared_ptr<TracedBufferPoolManager> bpm, std::optional<ReadPageGuard> guard, int index);
   ~IndexIterator();  // NOLINT
 
   auto IsEnd() -> bool;
@@ -39,12 +41,21 @@ class IndexIterator {
 
   auto operator++() -> IndexIterator &;
 
-  auto operator==(const IndexIterator &itr) const -> bool { UNIMPLEMENTED("TODO(P2): Add implementation."); }
+  auto operator==(const IndexIterator &itr) const -> bool {
+    if (!guard_.has_value() || !itr.guard_.has_value()) {
+      return !guard_.has_value() && !itr.guard_.has_value();
+    }
+    return guard_->GetPageId() == itr.guard_->GetPageId() && index_ == itr.index_;
+  }
 
-  auto operator!=(const IndexIterator &itr) const -> bool { UNIMPLEMENTED("TODO(P2): Add implementation."); }
+  auto operator!=(const IndexIterator &itr) const -> bool { return !(*this == itr); }
 
  private:
-  // add your own private member variables here
+  void AdvanceToValid();
+
+  std::shared_ptr<TracedBufferPoolManager> bpm_;
+  std::optional<ReadPageGuard> guard_;
+  int index_{0};
 };
 
 }  // namespace bustub

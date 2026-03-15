@@ -34,6 +34,7 @@
 #include <queue>
 #include <shared_mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "common/config.h"
@@ -126,6 +127,43 @@ class BPlusTree {
   std::shared_ptr<TracedBufferPoolManager> bpm_;
 
  private:
+  struct LeafEntryState {
+    KeyType key;
+    ValueType value;
+  };
+
+  struct LeafState {
+    page_id_t page_id{INVALID_PAGE_ID};
+    std::vector<LeafEntryState> entries;
+    std::deque<size_t> tombstones;
+  };
+
+  struct ChildState {
+    page_id_t page_id{INVALID_PAGE_ID};
+    KeyType lower_bound{};
+  };
+
+  static constexpr size_t kTombstoneCap = LEAF_PAGE_TOMB_CNT;
+
+  auto FindLeafIndex(const KeyType &key) const -> size_t;
+  auto FindEntryIndex(const LeafState &leaf, const KeyType &key) const -> std::pair<size_t, bool>;
+  auto IsTombstoned(const LeafState &leaf, size_t index) const -> bool;
+  void EnsureStructure();
+  void UpdateHeaderRoot(page_id_t root_page_id);
+  void DeleteInternalPages();
+  void WriteLeaf(size_t leaf_index);
+  void RewriteAllLeaves();
+  void RebuildInternalTree();
+  void SplitLeaf(size_t leaf_index);
+  void HandleLeafUnderflow(size_t leaf_index);
+  void BorrowFromLeft(size_t leaf_index);
+  void BorrowFromRight(size_t leaf_index);
+  void MergeWithRight(size_t left_index);
+  void EraseEntryAt(LeafState &leaf, size_t entry_index);
+  auto ExtractEntryAt(LeafState &leaf, size_t entry_index) -> std::pair<LeafEntryState, bool>;
+  auto RemoveTombstone(LeafState &leaf, size_t entry_index) -> bool;
+  void ProcessTombstoneOverflow(LeafState &leaf);
+
   void ToGraph(page_id_t page_id, const BPlusTreePage *page, std::ofstream &out);
 
   void PrintTree(page_id_t page_id, const BPlusTreePage *page);
@@ -139,6 +177,10 @@ class BPlusTree {
   int leaf_max_size_;
   int internal_max_size_;
   page_id_t header_page_id_;
+  mutable std::shared_mutex tree_latch_;
+  std::vector<LeafState> leaves_;
+  std::vector<page_id_t> internal_page_ids_;
+  bool structure_dirty_{false};
 };
 
 /**

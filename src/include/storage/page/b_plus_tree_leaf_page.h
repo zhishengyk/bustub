@@ -74,6 +74,14 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   void SetNextPageId(page_id_t next_page_id);
   auto KeyAt(int index) const -> KeyType;
   auto ValueAt(int index) const -> ValueType;
+  auto KeyAtRef(int index) const -> const KeyType &;
+  auto ValueAtRef(int index) const -> const ValueType &;
+  auto GetTombstoneCount() const -> size_t;
+  auto TombstoneAt(size_t index) const -> size_t;
+  auto IsTombstoned(int index) const -> bool;
+  void SetTombstoneCount(size_t count);
+  void SetTombstoneAt(size_t index, size_t value);
+  void SetEntryAt(int index, const KeyType &key, const ValueType &value);
 
   /**
    * @brief 仅用于测试，返回当前 Leaf Page 中所有键组成的字符串。
