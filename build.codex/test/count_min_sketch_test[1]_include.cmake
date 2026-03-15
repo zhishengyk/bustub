@@ -1,0 +1,5 @@
+if(EXISTS "D:/my project/bustub/build.codex/test/count_min_sketch_test[1]_tests.cmake")
+  include("D:/my project/bustub/build.codex/test/count_min_sketch_test[1]_tests.cmake")
+else()
+  add_test(count_min_sketch_test_NOT_BUILT count_min_sketch_test_NOT_BUILT)
+endif()

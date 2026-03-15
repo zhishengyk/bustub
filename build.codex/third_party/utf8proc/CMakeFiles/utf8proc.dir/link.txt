@@ -1,0 +1,2 @@
+D:\CLION2~1.2\bin\mingw\bin\ar.exe qc ..\..\lib\libutf8proc.a CMakeFiles/utf8proc.dir/utf8proc.c.obj
+D:\CLION2~1.2\bin\mingw\bin\ranlib.exe ..\..\lib\libutf8proc.a

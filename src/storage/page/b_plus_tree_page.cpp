@@ -15,31 +15,32 @@
 namespace bustub {
 
 /*
- * Helper methods to get/set page type
- * Page type enum class is defined in b_plus_tree_page.h
+ * 用于读取和修改页面类型的辅助函数。
+ * 页面类型枚举定义在 b_plus_tree_page.h 中。
  */
-auto BPlusTreePage::IsLeafPage() const -> bool { UNIMPLEMENTED("TODO(P2): Add implementation."); }
-void BPlusTreePage::SetPageType(IndexPageType page_type) { UNIMPLEMENTED("TODO(P2): Add implementation."); }
+auto BPlusTreePage::IsLeafPage() const -> bool { return page_type_ == IndexPageType::LEAF_PAGE; }
+void BPlusTreePage::SetPageType(IndexPageType page_type) { page_type_ = page_type; }
 
 /*
- * Helper methods to get/set size (number of key/value pairs stored in that
- * page)
+ * 用于读取和修改当前大小的辅助函数。
+ * 当前大小表示页面中存储的键值对数量。
  */
-auto BPlusTreePage::GetSize() const -> int { UNIMPLEMENTED("TODO(P2): Add implementation."); }
-void BPlusTreePage::SetSize(int size) { UNIMPLEMENTED("TODO(P2): Add implementation."); }
-void BPlusTreePage::ChangeSizeBy(int amount) { UNIMPLEMENTED("TODO(P2): Add implementation."); }
+auto BPlusTreePage::GetSize() const -> int { return size_; }
+void BPlusTreePage::SetSize(int size) { size_ = size; }
+void BPlusTreePage::ChangeSizeBy(int amount) { size_ += amount; }
 
 /*
- * Helper methods to get/set max size (capacity) of the page
+ * 用于读取和修改页面最大大小的辅助函数。
+ * 最大大小即页面容量。
  */
-auto BPlusTreePage::GetMaxSize() const -> int { UNIMPLEMENTED("TODO(P2): Add implementation."); }
-void BPlusTreePage::SetMaxSize(int size) { UNIMPLEMENTED("TODO(P2): Add implementation."); }
+auto BPlusTreePage::GetMaxSize() const -> int { return max_size_; }
+void BPlusTreePage::SetMaxSize(int size) { max_size_ = size; }
 
 /*
- * Helper method to get min page size
- * Generally, min page size == max page size / 2
- * But whether you will take ceil() or floor() depends on your implementation
+ * 用于计算页面最小大小的辅助函数。
+ * 一般来说，最小大小为 max_size / 2，
+ * 但具体是向上取整还是向下取整取决于你的实现。
  */
-auto BPlusTreePage::GetMinSize() const -> int { UNIMPLEMENTED("TODO(P2): Add implementation."); }
+auto BPlusTreePage::GetMinSize() const -> int { return max_size_ / 2; }
 
 }  // namespace bustub

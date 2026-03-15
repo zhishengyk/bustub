@@ -1,0 +1,2 @@
+D:\CLION2~1.2\bin\mingw\bin\ar.exe qc ..\..\lib\libbackward.a CMakeFiles/backward.dir/backward.cpp.obj
+D:\CLION2~1.2\bin\mingw\bin\ranlib.exe ..\..\lib\libbackward.a

@@ -29,16 +29,16 @@ namespace bustub {
    (sizeof(KeyType) + sizeof(ValueType)))  // NOLINT
 
 /**
- * Store indexed key and record id(record id = page id combined with slot id,
- * see include/common/rid.h for detailed implementation) together within leaf
- * page. Only support unique key.
+ * Leaf Page 中按序存储键以及对应的 Record ID。
+ * Record ID 由 page id 和 slot id 组成，具体定义见 `include/common/rid.h`。
+ * 该实现只支持唯一键。
  *
- * Leaf pages also contain a fixed buffer of "tombstone" indexes for entries
- * that have been deleted.
+ * Leaf Page 还包含一个固定大小的 tombstone 下标缓冲区，
+ * 用于记录已经被逻辑删除的条目。
  *
- * Leaf page format (keys are stored in order, tomb order is up to you):
+ * Leaf Page 的布局如下（键按顺序存储，tombstone 的顺序由你决定）：
  *  --------------------
- * | HEADER | TOMB_SIZE | (where TOMB_SIZE is num_tombstones_)
+ * | HEADER | TOMB_SIZE | 其中 TOMB_SIZE 即 num_tombstones_
  *  --------------------
  *  -----------------------------------
  * | TOMB(0) | TOMB(1) | ... | TOMB(k) |
@@ -50,7 +50,7 @@ namespace bustub {
  * | RID(1) | RID(2) | ... | RID(n) |
  *  ---------------------------------
  *
- *  Header format (size in byte, 16 bytes in total):
+ * 页头格式（单位：字节，总计 16 字节）：
  *  -----------------------------------------------
  * | PageType (4) | CurrentSize (4) | MaxSize (4) |
  *  -----------------------------------------------
@@ -61,7 +61,7 @@ namespace bustub {
 FULL_INDEX_TEMPLATE_ARGUMENTS_DEFN
 class BPlusTreeLeafPage : public BPlusTreePage {
  public:
-  // Delete all constructor / destructor to ensure memory safety
+  // 禁用默认构造与拷贝，避免误用。
   BPlusTreeLeafPage() = delete;
   BPlusTreeLeafPage(const BPlusTreeLeafPage &other) = delete;
 
@@ -69,14 +69,15 @@ class BPlusTreeLeafPage : public BPlusTreePage {
 
   auto GetTombstones() const -> std::vector<KeyType>;
 
-  // Helper methods
+  // 辅助函数
   auto GetNextPageId() const -> page_id_t;
   void SetNextPageId(page_id_t next_page_id);
   auto KeyAt(int index) const -> KeyType;
+  auto ValueAt(int index) const -> ValueType;
 
   /**
-   * @brief for test only return a string representing all keys in
-   * this leaf page formatted as "(tombkey1, tombkey2, ...|key1,key2,key3,...)"
+   * @brief 仅用于测试，返回当前 Leaf Page 中所有键组成的字符串。
+   * 格式为 "(tombkey1, tombkey2, ...|key1,key2,key3,...)"
    *
    * @return std::string
    */
@@ -112,12 +113,12 @@ class BPlusTreeLeafPage : public BPlusTreePage {
  private:
   page_id_t next_page_id_;
   size_t num_tombstones_;
-  // Fixed-size tombstone buffer (indexes into key_array_ / rid_array_).
+  // 固定大小的 tombstone 缓冲区，存储 key_array_ / rid_array_ 的下标。
   size_t tombstones_[LEAF_PAGE_TOMB_CNT];
-  // Array members for page data.
+  // 页面数据对应的数组成员。
   KeyType key_array_[LEAF_PAGE_SLOT_CNT];
   ValueType rid_array_[LEAF_PAGE_SLOT_CNT];
-  // (Spring 2025) Feel free to add more fields and helper functions below if needed
+  // 如有需要，可以在下方添加更多字段和辅助函数。
 };
 
 }  // namespace bustub

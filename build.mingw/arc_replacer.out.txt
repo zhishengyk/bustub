@@ -1,0 +1,15 @@
+Running main() from gmock_main.cc
+[==========] Running 3 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 3 tests from ArcReplacerTest
+[ RUN      ] ArcReplacerTest.DISABLED_SampleTest
+[       OK ] ArcReplacerTest.DISABLED_SampleTest (0 ms)
+[ RUN      ] ArcReplacerTest.DISABLED_SampleTest2
+[       OK ] ArcReplacerTest.DISABLED_SampleTest2 (0 ms)
+[ RUN      ] ArcReplacerTest.DISABLED_RemoveBehaviorTest
+[       OK ] ArcReplacerTest.DISABLED_RemoveBehaviorTest (0 ms)
+[----------] 3 tests from ArcReplacerTest (13 ms total)
+
+[----------] Global test environment tear-down
+[==========] 3 tests from 1 test suite ran. (23 ms total)
+[  PASSED  ] 3 tests.

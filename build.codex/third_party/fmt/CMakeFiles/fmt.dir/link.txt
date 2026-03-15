@@ -1,0 +1,2 @@
+D:\CLION2~1.2\bin\mingw\bin\ar.exe qc ..\..\lib\libfmtd.a CMakeFiles/fmt.dir/src/format.cc.obj CMakeFiles/fmt.dir/src/os.cc.obj
+D:\CLION2~1.2\bin\mingw\bin\ranlib.exe ..\..\lib\libfmtd.a

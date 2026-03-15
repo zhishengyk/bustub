@@ -1,0 +1,5 @@
+if(EXISTS "D:/my project/bustub/build.codex/test/page_guard_test[1]_tests.cmake")
+  include("D:/my project/bustub/build.codex/test/page_guard_test[1]_tests.cmake")
+else()
+  add_test(page_guard_test_NOT_BUILT page_guard_test_NOT_BUILT)
+endif()

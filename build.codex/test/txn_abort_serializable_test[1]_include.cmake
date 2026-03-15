@@ -1,0 +1,5 @@
+if(EXISTS "D:/my project/bustub/build.codex/test/txn_abort_serializable_test[1]_tests.cmake")
+  include("D:/my project/bustub/build.codex/test/txn_abort_serializable_test[1]_tests.cmake")
+else()
+  add_test(txn_abort_serializable_test_NOT_BUILT txn_abort_serializable_test_NOT_BUILT)
+endif()

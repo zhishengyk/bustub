@@ -124,7 +124,7 @@ void DiskManager::ReadPage(page_id_t page_id, char *page_data) {
     return;
   }
   if (offset > static_cast<size_t>(file_size)) {
-    LOG_DEBUG("I/O error: Read page %d past the end of file at offset %lu", page_id, offset);
+    LOG_DEBUG("I/O error: Read page %d past the end of file at offset %zu", page_id, offset);
     return;
   }
 
@@ -142,7 +142,7 @@ void DiskManager::ReadPage(page_id_t page_id, char *page_data) {
   // Check if the file ended before we could read a full page.
   int read_count = db_io_.gcount();
   if (read_count < BUSTUB_PAGE_SIZE) {
-    LOG_DEBUG("I/O error: Read page %d hit the end of file at offset %lu, missing %d bytes", page_id, offset,
+    LOG_DEBUG("I/O error: Read page %d hit the end of file at offset %zu, missing %d bytes", page_id, offset,
               BUSTUB_PAGE_SIZE - read_count);
     db_io_.clear();
     memset(page_data + read_count, 0, BUSTUB_PAGE_SIZE - read_count);
@@ -247,9 +247,9 @@ auto DiskManager::GetNumDeletes() const -> int { return num_deletes_; }
 /**
  * Private helper function to get disk file size
  */
-auto DiskManager::GetFileSize(const std::string &file_name) -> int {
+auto DiskManager::GetFileSize(const std::filesystem::path &file_name) -> int {
   struct stat stat_buf;
-  int rc = stat(file_name.c_str(), &stat_buf);
+  int rc = stat(file_name.string().c_str(), &stat_buf);
   return rc == 0 ? static_cast<int>(stat_buf.st_size) : -1;
 }
 

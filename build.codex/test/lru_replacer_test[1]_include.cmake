@@ -1,0 +1,5 @@
+if(EXISTS "D:/my project/bustub/build.codex/test/lru_replacer_test[1]_tests.cmake")
+  include("D:/my project/bustub/build.codex/test/lru_replacer_test[1]_tests.cmake")
+else()
+  add_test(lru_replacer_test_NOT_BUILT lru_replacer_test_NOT_BUILT)
+endif()

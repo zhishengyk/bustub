@@ -108,7 +108,7 @@ class DiskManager {
   size_t page_capacity_{DEFAULT_DB_IO_SIZE};
 
  private:
-  auto GetFileSize(const std::string &file_name) -> int;
+  auto GetFileSize(const std::filesystem::path &file_name) -> int;
 
   auto AllocatePage() -> size_t;
 

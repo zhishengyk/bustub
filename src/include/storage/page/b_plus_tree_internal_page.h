@@ -25,14 +25,12 @@ namespace bustub {
   ((BUSTUB_PAGE_SIZE - INTERNAL_PAGE_HEADER_SIZE) / ((int)(sizeof(KeyType) + sizeof(ValueType))))  // NOLINT
 
 /**
- * Store `n` indexed keys and `n + 1` child pointers (page_id) within internal page.
- * Pointer PAGE_ID(i) points to a subtree in which all keys K satisfy:
- * K(i) <= K < K(i+1).
- * NOTE: Since the number of keys does not equal to number of child pointers,
- * the first key in key_array_ always remains invalid. That is to say, any search / lookup
- * should ignore the first key.
+ * Internal Page 中存储若干有序键和对应的子页面指针。
  *
- * Internal page format (keys are stored in increasing order):
+ * 注意：由于子指针数量与有效键数量的关系，`key_array_[0]` 始终是无效键，
+ * 查找时应从 `key_array_[1]` 开始使用；而 `page_id_array_[0]` 是有效的最左孩子指针。
+ *
+ * Internal Page 的布局如下（键按升序存储）：
  *  ---------
  * | HEADER |
  *  ---------
@@ -46,7 +44,7 @@ namespace bustub {
 INDEX_TEMPLATE_ARGUMENTS
 class BPlusTreeInternalPage : public BPlusTreePage {
  public:
-  // Delete all constructor / destructor to ensure memory safety
+  // 禁用默认构造与拷贝，避免误用。
   BPlusTreeInternalPage() = delete;
   BPlusTreeInternalPage(const BPlusTreeInternalPage &other) = delete;
 
@@ -57,24 +55,24 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   void SetKeyAt(int index, const KeyType &key);
 
   /**
-   * @param value The value to search for
-   * @return The index that corresponds to the specified value
+   * @param value 要查找的 value
+   * @return 该 value 对应的下标
    */
   auto ValueIndex(const ValueType &value) const -> int;
 
   auto ValueAt(int index) const -> ValueType;
 
   /**
-   * @brief For test only, return a string representing all keys in
-   * this internal page, formatted as "(key1,key2,key3,...)"
+   * @brief 仅用于测试，返回当前 Internal Page 中所有键组成的字符串。
+   * 格式为 "(key1,key2,key3,...)"
    *
-   * @return The string representation of all keys in the current internal page
+   * @return 当前 Internal Page 中所有键的字符串表示
    */
   auto ToString() const -> std::string {
     std::string kstr = "(";
     bool first = true;
 
-    // First key of internal page is always invalid
+    // Internal Page 的第一个键始终是无效键。
     for (int i = 1; i < GetSize(); i++) {
       KeyType key = KeyAt(i);
       if (first) {
@@ -91,10 +89,10 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   }
 
  private:
-  // Array members for page data.
+  // 页面数据对应的数组成员。
   KeyType key_array_[INTERNAL_PAGE_SLOT_CNT];
   ValueType page_id_array_[INTERNAL_PAGE_SLOT_CNT];
-  // (Spring 2025) Feel free to add more fields and helper functions below if needed
+  // 如有需要，可以在下方添加更多字段和辅助函数。
 };
 
 }  // namespace bustub

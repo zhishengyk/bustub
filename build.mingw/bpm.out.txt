@@ -1,0 +1,31 @@
+Running main() from gmock_main.cc
+[==========] Running 7 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 7 tests from BufferPoolManagerTest
+[ RUN      ] BufferPoolManagerTest.DISABLED_VeryBasicTest
+[       OK ] BufferPoolManagerTest.DISABLED_VeryBasicTest (58 ms)
+[ RUN      ] BufferPoolManagerTest.DISABLED_PagePinEasyTest
+unknown file: Failure
+C++ exception with description "filesystem error: cannot remove: 另一个程序正在使用此文件，进程无法访问。
+ [test.bustub]" thrown in the test body.
+
+[  FAILED  ] BufferPoolManagerTest.DISABLED_PagePinEasyTest (48 ms)
+[ RUN      ] BufferPoolManagerTest.DISABLED_PagePinMediumTest
+[       OK ] BufferPoolManagerTest.DISABLED_PagePinMediumTest (67 ms)
+[ RUN      ] BufferPoolManagerTest.DISABLED_PageAccessTest
+[       OK ] BufferPoolManagerTest.DISABLED_PageAccessTest (1590 ms)
+[ RUN      ] BufferPoolManagerTest.DISABLED_ContentionTest
+[       OK ] BufferPoolManagerTest.DISABLED_ContentionTest (320 ms)
+[ RUN      ] BufferPoolManagerTest.DISABLED_DeadlockTest
+[       OK ] BufferPoolManagerTest.DISABLED_DeadlockTest (1014 ms)
+[ RUN      ] BufferPoolManagerTest.DISABLED_EvictableTest
+[       OK ] BufferPoolManagerTest.DISABLED_EvictableTest (1772 ms)
+[----------] 7 tests from BufferPoolManagerTest (4890 ms total)
+
+[----------] Global test environment tear-down
+[==========] 7 tests from 1 test suite ran. (4910 ms total)
+[  PASSED  ] 6 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] BufferPoolManagerTest.DISABLED_PagePinEasyTest
+
+ 1 FAILED TEST

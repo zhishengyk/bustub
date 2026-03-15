@@ -1,0 +1,5 @@
+if(EXISTS "D:/my project/bustub/build.codex/test/tmp_tuple_page_test[1]_tests.cmake")
+  include("D:/my project/bustub/build.codex/test/tmp_tuple_page_test[1]_tests.cmake")
+else()
+  add_test(tmp_tuple_page_test_NOT_BUILT tmp_tuple_page_test_NOT_BUILT)
+endif()

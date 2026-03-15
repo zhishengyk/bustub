@@ -42,4 +42,4 @@ class ClockReplacer : public Replacer {
   // TODO(student): 请实现！
 };
 
-}  // 命名空间 bustub
+}  // namespace bustub
